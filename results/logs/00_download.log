@@ -1,0 +1,26 @@
+2025-11-18 03:24:53.449919 INFO::Starting satellite cell transcriptomics data download pipeline
+2025-11-18 03:24:53.454104 INFO::Configured GEO dataset: GSE65927
+2025-11-18 03:24:53.45467 INFO::Expected platform: GPL13112
+2025-11-18 03:24:53.464348 INFO::Connecting to GEO database via GEOquery::getGEO ...
+2025-11-18 03:24:56.537745 INFO::Successfully downloaded dataset: GSE65927
+2025-11-18 03:24:56.538873 INFO::Platform (from ExpressionSet annotation): GPL1261
+2025-11-18 03:24:56.539812 INFO::Number of samples: 11
+2025-11-18 03:24:56.540396 INFO::Number of features: 45101
+2025-11-18 03:24:57.771305 INFO::Raw ExpressionSet saved to: data/raw/GSE65927_raw.RData
+2025-11-18 03:24:57.839229 INFO::Phenotype data saved to: data/metadata/GSE65927_phenotype.csv
+2025-11-18 03:24:58.10901 INFO::Feature data saved to: data/metadata/GSE65927_features.csv
+2025-11-18 03:24:58.116293 ERROR::Error downloading GEO data: lazy-load database '/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/stringi/R/stringi.rdb' is corrupt
+2025-11-18 03:28:30.659413 INFO::Starting satellite cell transcriptomics data download pipeline
+2025-11-18 03:28:30.675293 INFO::Configured GEO dataset: GSE65927
+2025-11-18 03:28:30.679402 INFO::Expected platform: GPL13112
+2025-11-18 03:28:30.68715 INFO::Connecting to GEO database via GEOquery::getGEO ...
+2025-11-18 03:28:34.535821 INFO::Successfully downloaded dataset: GSE65927
+2025-11-18 03:28:34.536601 INFO::Platform (from ExpressionSet annotation): GPL1261
+2025-11-18 03:28:34.53734 INFO::Number of samples: 11
+2025-11-18 03:28:34.537868 INFO::Number of features: 45101
+2025-11-18 03:28:35.676312 INFO::Raw ExpressionSet saved to: data/raw/GSE65927_raw.RData
+2025-11-18 03:28:35.680641 INFO::Phenotype data saved to: data/metadata/GSE65927_phenotype.csv
+2025-11-18 03:28:35.873073 INFO::Feature data saved to: data/metadata/GSE65927_features.csv
+2025-11-18 03:28:35.875068 INFO::Sample information saved to: data/metadata/sample_info.csv
+2025-11-18 03:28:35.966376 INFO::Data validation completed. Report saved to: results/data_validation.json
+2025-11-18 03:28:35.967163 INFO::Data download pipeline completed successfully

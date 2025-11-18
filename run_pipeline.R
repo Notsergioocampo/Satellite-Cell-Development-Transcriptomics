@@ -1,125 +1,166 @@
 #!/usr/bin/env Rscript
 # Satellite Cell Development Transcriptomics Pipeline
-# Main Pipeline Runner
+# Main Pipeline Runner (MIT-level, but not MIT-level fragile 😅)
 
-# Load utility functions
+# -------------------------
+# 0. Basic safety checks
+# -------------------------
+if (!file.exists("src/utils.R")) {
+  stop("utils.R not found. Make sure you are running this script from the project root (where src/ lives).")
+}
+
+# Load utility functions (logging, config, helpers)
 source("src/utils.R")
 
-# Setup logging and configuration
+# -------------------------
+# 1. Setup logging & config
+# -------------------------
 logfile <- setup_logging()
+loginfo(paste("Logging initialized. Log file:", logfile))
+
 config <- load_config()
+loginfo("Configuration loaded from config.yaml")
 
 # Create progress tracker
 progress_file <- create_progress_tracker()
+loginfo(paste("Progress tracker initialized:", progress_file))
 
-# Check system information
+# System info
 sys_info <- get_system_info()
 loginfo(paste("System:", sys_info$platform, "| R version:", sys_info$version))
 
-# Check dependencies
+# -------------------------
+# 2. Dependency management
+# -------------------------
 required_packages <- c(
-  "GEOquery", "Biobase", "limma", "affy", "preprocessCore", "DESeq2", "edgeR",
+  "GEOquery", "Biobase", "limma", "affy", "preprocessCore",
+  "DESeq2", "edgeR",
   "clusterProfiler", "org.Mm.eg.db", "DOSE", "enrichplot", "GSVA", "GSEABase",
-  "igraph", "ggnetwork", "ggraph", "tidygraph", "GENIE3", "umap", "Rtsne", 
-  "phate", "destiny", "monocle3", "ggplot2", "ComplexHeatmap", "viridis",
+  "igraph", "ggnetwork", "ggraph", "tidygraph", "GENIE3",
+  "umap", "Rtsne", "phate", "destiny", "monocle3",
+  "ggplot2", "ComplexHeatmap", "viridis",
   "yaml", "logging", "dplyr", "tidyr", "jsonlite", "R.utils"
 )
 
+# check_dependencies() should be defined in utils.R
 missing_packages <- check_dependencies(required_packages)
-if (!is.null(missing_packages)) {
-  logwarn(paste("Installing missing packages:", paste(missing_packages, collapse = ", ")))
+
+if (!is.null(missing_packages) && length(missing_packages) > 0) {
+  logwarn(paste("Missing packages detected:", paste(missing_packages, collapse = ", ")))
+  loginfo("Attempting to install missing packages via install_missing_packages()")
+
   install_missing_packages(missing_packages)
+
+  # Re-check after installation
+  missing_after <- check_dependencies(required_packages)
+  if (!is.null(missing_after) && length(missing_after) > 0) {
+    logerror(paste(
+      "Some packages are still missing after installation attempt:",
+      paste(missing_after, collapse = ", ")
+    ))
+    stop("Unresolved package dependencies. Please install these manually and re-run the pipeline.")
+  } else {
+    loginfo("All required packages are now installed.")
+  }
+} else {
+  loginfo("All required packages are already installed.")
 }
 
-# Create directory structure
+# Optionally load them (if your code expects them to be attached)
+suppressPackageStartupMessages(
+  invisible(lapply(required_packages, function(p) {
+    # Some Bioc packages might not be on CRAN, but library() works once installed
+    tryCatch(library(p, character.only = TRUE), error = function(e) {
+      logwarn(paste("Could not attach package:", p, "->", e$message))
+    })
+  }))
+)
+
+# -------------------------
+# 3. Directory structure
+# -------------------------
 create_directory_structure()
+loginfo("Directory structure verified/created.")
 
 # Initialize results tracking
 results_list <- list()
 
+# Helper to safely source a step
+run_step <- function(step_name, script_path, key) {
+  loginfo(paste("STEP", step_name, ":", key))
+  if (!file.exists(script_path)) {
+    msg <- paste("Script not found:", script_path)
+    logerror(msg)
+    update_progress(key, "error", msg)
+    stop(msg)
+  }
+
+  tryCatch({
+    source(script_path)
+    update_progress(key, "completed")
+    results_list[[key]] <<- "completed"
+    loginfo(paste("Step", key, "completed successfully."))
+  }, error = function(e) {
+    err_msg <- conditionMessage(e)
+    logerror(paste("Step", key, "failed:", err_msg))
+    update_progress(key, "error", err_msg)
+    stop(paste("Pipeline halted at step", key, "->", err_msg))
+  })
+}
+
+# -------------------------
+# 4. Run pipeline steps
+# -------------------------
+
 # Step 0: Data Download
-loginfo("STEP 0: Data Download")
-tryCatch({
-  source("src/00_download.R")
-  update_progress("data_download", "completed")
-  results_list$data_download <- "completed"
-}, error = function(e) {
-  update_progress("data_download", "error", conditionMessage(e))
-  stop("Data download failed")
-})
+run_step("0: Data Download", "src/00_download.R", "data_download")
 
 # Step 1: Preprocessing and Quality Control
-loginfo("STEP 1: Preprocessing and Quality Control")
-tryCatch({
-  source("src/01_preprocess.R")
-  update_progress("preprocessing", "completed")
-  results_list$preprocessing <- "completed"
-}, error = function(e) {
-  update_progress("preprocessing", "error", conditionMessage(e))
-  stop("Preprocessing failed")
-})
+run_step("1: Preprocessing and Quality Control", "src/01_preprocess.R", "preprocessing")
 
 # Step 2: Differential Expression Analysis
-loginfo("STEP 2: Differential Expression Analysis")
-tryCatch({
-  source("src/02_de_analysis.R")
-  update_progress("de_analysis", "completed")
-  results_list$de_analysis <- "completed"
-}, error = function(e) {
-  update_progress("de_analysis", "error", conditionMessage(e))
-  stop("DE analysis failed")
-})
+run_step("2: Differential Expression Analysis", "src/02_de_analysis.R", "de_analysis")
 
 # Step 3: Pathway Enrichment Analysis
-loginfo("STEP 3: Pathway Enrichment Analysis")
-tryCatch({
-  source("src/03_enrichment.R")
-  update_progress("enrichment_analysis", "completed")
-  results_list$enrichment_analysis <- "completed"
-}, error = function(e) {
-  update_progress("enrichment_analysis", "error", conditionMessage(e))
-  stop("Enrichment analysis failed")
-})
+run_step("3: Pathway Enrichment Analysis", "src/03_enrichment.R", "enrichment_analysis")
 
 # Step 4: Network Inference
-loginfo("STEP 4: Gene Regulatory Network Inference")
-tryCatch({
-  source("src/04_network_inference.R")
-  update_progress("network_inference", "completed")
-  results_list$network_inference <- "completed"
-}, error = function(e) {
-  update_progress("network_inference", "error", conditionMessage(e))
-  stop("Network inference failed")
-})
+run_step("4: Gene Regulatory Network Inference", "src/04_network_inference.R", "network_inference")
 
 # Step 5: Advanced Visualizations
-loginfo("STEP 5: Advanced Visualizations")
+run_step("5: Advanced Visualizations", "src/05_visualizations.R", "visualizations")
+
+# -------------------------
+# 5. Final report & checks
+# -------------------------
+loginfo("GENERATING FINAL SUMMARY REPORT")
+final_report <- NULL
 tryCatch({
-  source("src/05_visualizations.R")
-  update_progress("visualizations", "completed")
-  results_list$visualizations <- "completed"
+  final_report <- generate_summary_report(results_list)
+  loginfo(paste("Summary report generated:", final_report))
 }, error = function(e) {
-  update_progress("visualizations", "error", conditionMessage(e))
-  stop("Visualization failed")
+  logwarn(paste("Could not generate summary report:", conditionMessage(e)))
 })
 
-# Generate final report
-loginfo("GENERATING FINAL REPORT")
-final_report <- generate_summary_report(results_list)
-
-# Final system check
 final_memory <- check_memory_usage()
 loginfo(paste("Final memory usage:", final_memory$used_mb, "MB"))
 
-# Pipeline completion
 loginfo("PIPELINE COMPLETED SUCCESSFULLY")
 loginfo(paste("Results saved to:", getwd()))
-loginfo(paste("Final report:", final_report))
-loginfo("All analysis steps completed successfully")
 
-# Print completion message
-cat("\nSATELLITE CELL DEVELOPMENT TRANSCRIPTOMICS PIPELINE COMPLETED\n")
-cat("Results available in:", getwd(), "\n")
-cat("Final report:", final_report, "\n")
-cat("Analysis completed at:", Sys.time(), "\n")
-cat("This pipeline represents MIT-level research quality analysis\n")
+if (!is.null(final_report)) {
+  loginfo(paste("Final report:", final_report))
+}
+
+# -------------------------
+# 6. Console completion message
+# -------------------------
+cat("\n=============================================\n")
+cat("SATELLITE CELL DEVELOPMENT PIPELINE COMPLETED\n")
+cat("=============================================\n\n")
+cat("Results directory: ", getwd(), "\n", sep = "")
+if (!is.null(final_report)) {
+  cat("Final report:      ", final_report, "\n", sep = "")
+}
+cat("Completion time:   ", as.character(Sys.time()), "\n", sep = "")
+cat("Note: This pipeline is designed for MIT-level research quality analysis.\n\n")

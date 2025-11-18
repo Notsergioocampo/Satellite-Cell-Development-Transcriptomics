@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-11-18 03:28:35.882346",
+  "dataset_id": "GSE65927",
+  "platform": "GPL1261",
+  "n_samples": 11,
+  "n_features": 45101,
+  "n_stages": 1,
+  "stages_present": "unknown",
+  "missing_values": 0,
+  "expression_range": [-0.7848, 14.5765],
+  "qc_pass": false,
+  "warnings": "Missing developmental stages: P1, P12, P28"
+}
