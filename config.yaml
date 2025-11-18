@@ -1,0 +1,67 @@
+# Satellite Cell Development Transcriptomics Pipeline Configuration
+# MIT-Level Research Pipeline Configuration
+
+# Dataset Configuration
+dataset:
+  geo_id: "GSE65927"
+  platform: "GPL13112"  # Illumina MouseRef-8 v2.0 expression beadchip
+  species: "Mus musculus"
+  developmental_stages: ["P1", "P12", "P28"]
+  replicate_count: 3
+  
+# Analysis Parameters
+analysis:
+  # Differential Expression
+  de_method: "DESeq2"
+  padj_threshold: 0.05
+  log2fc_threshold: 1.0
+  
+  # Quality Control
+  qc_methods: ["PCA", "clustering", "outlier_detection"]
+  variance_threshold: 0.2
+  min_counts: 10
+  
+  # Enrichment Analysis
+  enrichment_databases: ["GO", "KEGG", "Reactome", "MSigDB"]
+  min_geneset_size: 15
+  max_geneset_size: 500
+  
+  # Network Inference
+  network_method: "GRNBoost2"
+  correlation_threshold: 0.7
+  tf_motif_analysis: true
+  
+  # Trajectory Analysis
+  manifold_methods: ["UMAP", "t-SNE", "PHATE", "diffusion_map"]
+  pseudotime_method: "Monocle3"
+  branch_detection: true
+
+# Visualization Settings
+visualization:
+  theme: "minimal"
+  color_palette: "viridis"
+  figure_format: "pdf"
+  figure_dpi: 300
+  font_size: 12
+  dark_theme: true
+
+# Machine Learning
+ml:
+  cross_validation_folds: 5
+  random_forest_trees: 1000
+  autoencoder_dimensions: [512, 256, 128, 64, 32]
+  clustering_methods: ["kmeans", "hierarchical", "dbscan"]
+
+# Output Settings
+output:
+  save_intermediate: true
+  compress_results: true
+  create_report: true
+  generate_dashboard: true
+
+# Computational Resources
+compute:
+  parallel_processing: true
+  max_cores: 8
+  memory_limit: "16G"
+  batch_size: 1000
