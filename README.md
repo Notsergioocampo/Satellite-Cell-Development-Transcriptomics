@@ -38,7 +38,7 @@ Satellite cells are the primary adult stem cells responsible for skeletal muscle
 - Dark-theme ready plots for presentations
 - Vector-based outputs for high-resolution publishing
 
-## 📋 Pipeline Overview
+## Pipeline Overview
 
 ```mermaid
 graph TD
@@ -55,7 +55,7 @@ graph TD
     style I fill:#9f9,stroke:#333,stroke-width:2px
 ```
 
-## 🛠️ Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 
@@ -97,7 +97,7 @@ install.packages(c(
 ))
 ```
 
-## 📊 Dataset Information
+## Dataset Information
 
 - **GEO Accession**: GSE65927
 - **Platform**: Illumina MouseRef-8 v2.0 expression beadchip
@@ -106,7 +106,7 @@ install.packages(c(
 - **Biological Replicates**: 3 per stage
 - **Total Samples**: 9
 
-## 🔧 Pipeline Architecture
+## Pipeline Architecture
 
 ```
 satellite-cell-development-transcriptomics/
@@ -132,7 +132,7 @@ satellite-cell-development-transcriptomics/
 └── docs/                                            # Documentation
 ```
 
-## 🎯 Major Discoveries
+## Major Discoveries
 
 ### 1. Quiescence Signature Discovery
 - **Core quiescence TFs**: Pax7, Myf5, Six1
@@ -155,7 +155,7 @@ satellite-cell-development-transcriptomics/
 - **Decelerating pathways**: Myogenesis, oxidative phosphorylation
 - **Direction changes**: Notch signaling switches from pro-proliferative to quiescence-maintaining
 
-## 📈 Usage Instructions
+## Usage Instructions
 
 ### Running the Complete Pipeline
 
@@ -214,7 +214,7 @@ Edit `config.yaml` to modify:
 - Random seed setting for reproducible results
 - Detailed progress tracking
 
-## 📊 Example Results
+## Example Results
 
 ### Volcano Plot (P28 vs P1)
 ![Volcano Plot](figures/volcano_plots.pdf)
@@ -232,7 +232,7 @@ Edit `config.yaml` to modify:
 ![Pathway Analysis](figures/enrichment_analysis.pdf)
 *Hallmark pathway enrichment across developmental stages*
 
-## 🌟 Why This Project Matters for Regenerative Medicine
+## Why This Project Matters for Regenerative Medicine
 
 1. **Therapeutic Target Identification**: Discovers novel regulators of satellite cell quiescence
 2. **Biomarker Discovery**: Identifies stage-specific gene signatures for clinical applications
@@ -240,7 +240,7 @@ Edit `config.yaml` to modify:
 4. **Disease Understanding**: Reveals mechanisms underlying muscle degenerative diseases
 5. **Personalized Medicine**: Enables patient-specific satellite cell characterization
 
-## 🔮 Future Extensions
+## Future Extensions
 
 ### Immediate Enhancements
 - **Single-cell RNA-seq integration** for cellular heterogeneity analysis
@@ -260,7 +260,7 @@ Edit `config.yaml` to modify:
 - **Time-series modeling** with Prophet/ARIMA
 - **Network medicine approaches** for drug target prediction
 
-## 📚 Citations & References
+## Citations & References
 
 ### Methodology
 - Love, M. I., Huber, W., & Anders, S. (2014). Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. *Genome Biology*, 15(12), 550.
@@ -275,7 +275,7 @@ Edit `config.yaml` to modify:
 - McInnes, L., Healy, J., & Melville, J. (2018). UMAP: Uniform Manifold Approximation and Projection for Dimension Reduction. *arXiv preprint* arXiv:1802.03426.
 - Moon, K. R., et al. (2019). Visualizing structure and transitions in high-dimensional biological data. *Nature Biotechnology*, 37(12), 1482-1492.
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions from the computational biology community:
 
@@ -292,7 +292,7 @@ We welcome contributions from the computational biology community:
 - Ensure **reproducibility** with random seeds
 - Update **README** with new features
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -309,7 +309,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Email**: Contact for collaboration inquiries
 - **Documentation**: Check `docs/` folder for detailed guides
 
-## 🏆 Acknowledgments
+## Acknowledgments
 
 - **MIT CSAIL** for computational biology inspiration
 - **Broad Institute** for systems biology methodologies
@@ -321,7 +321,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
   
-**⭐ If this pipeline advances your research, please give it a star! ⭐**
+**If this pipeline advances your research, please give it a star! ⭐**
 
 *This project represents the intersection of cutting-edge computational biology and important biological questions in regenerative medicine.*
 
