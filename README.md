@@ -296,12 +296,12 @@ We welcome contributions from the computational biology community:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📞 Contact & Support
+## Contact & Support
 
-**Lead Developer**: [Your Name]  
-**Email**: [your.email@institution.edu]  
-**Institution**: [Your Institution]  
-**Lab**: [Your Lab Website]
+**Lead Developer**: Sergio Ocampo  
+**Email**: socampo3@dons.usfca.edu  
+**Institution**: Ocampo BioTech  
+**Lab**: Ocampo BioTech
 
 ### Getting Help
 - **Issues**: Report bugs via GitHub Issues
