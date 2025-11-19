@@ -8,7 +8,7 @@ A World-Class MIT-Level Research Pipeline for Systems Biology
 
 ## Abstract
 
-This project represents a cutting-edge computational pipeline for analyzing satellite cell development transcriptomics data across postnatal stages (P1 → P12 → P28). Built with the sophistication expected by MIT CSAIL, Broad Institute, and HHMI investigators, this pipeline integrates advanced bioinformatics, machine learning, and systems biology approaches to uncover the molecular mechanisms governing satellite cell quiescence, activation, and differentiation.
+This project represents a cutting-edge computational pipeline for analyzing satellite cell development transcriptomics data across postnatal stages (P1 → P12 → P28). This pipeline integrates advanced bioinformatics, machine learning, and systems biology approaches to uncover the molecular mechanisms governing satellite cell quiescence, activation, and differentiation.
 
 ## Biological Background
 

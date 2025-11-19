@@ -36,7 +36,7 @@ output:
 # -------------------------------
 cran_pkgs <- c(
   "ggplot2", "dplyr", "readr", "knitr", "rmarkdown",
-  "umap", "Rtsne", "igraph", "yaml", "viridisLite"
+  "umap", "Rtsne", "igraph", "yaml", "viridis"  # use viridis (for ggplot scales)
 )
 
 bioc_pkgs <- c("DESeq2", "clusterProfiler", "org.Mm.eg.db")
@@ -47,7 +47,12 @@ required_pkgs <- c(cran_pkgs, bioc_pkgs)
 # 2. Check that all packages are installed
 #    (do NOT auto-install here)
 # -------------------------------
-missing <- required_pkgs[!sapply(required_pkgs, requireNamespace, quietly = TRUE)]
+missing <- required_pkgs[!vapply(
+  required_pkgs,
+  requireNamespace,
+  quietly = TRUE,
+  FUN.VALUE = logical(1)
+)]
 
 if (length(missing) > 0) {
   msg <- paste0(
@@ -61,7 +66,7 @@ if (length(missing) > 0) {
     msg <- paste0(
       msg,
       "CRAN packages:\n  install.packages(c(",
-      paste(sprintf('"%s"', cran_missing), collapse = ", "), "))\n\n"
+      paste(sprintf('\"%s\"', cran_missing), collapse = ", "), "))\n\n"
     )
   }
 
@@ -70,7 +75,7 @@ if (length(missing) > 0) {
     msg <- paste0(
       msg,
       "Bioconductor packages:\n  BiocManager::install(c(",
-      paste(sprintf('"%s"', bioc_missing), collapse = ", "), "))\n"
+      paste(sprintf('\"%s\"', bioc_missing), collapse = ", "), "))\n"
     )
   }
 
@@ -144,48 +149,16 @@ required_results <- c(
 
 missing_results <- required_results[!file.exists(required_results)]
 
-# -------------------------------
-# 6. Run pipeline once if results missing
-# -------------------------------
 if (length(missing_results) > 0) {
-  message("Missing results detected: ", paste(missing_results, collapse = ", "))
-  message("Attempting to run full pipeline to generate required results...")
-
-  tryCatch({
-    src_files <- file.path("src", c(
-      "00_download.R",
-      "01_preprocess.R",
-      "02_de_analysis.R",
-      "03_enrichment.R",
-      "04_network_inference.R",
-      "05_visualizations.R"
-    ))
-
-    for (f in src_files) {
-      if (file.exists(f)) {
-        message("Sourcing: ", f)
-        source(f)
-      } else {
-        warning("Pipeline script not found: ", f)
-      }
-    }
-
-    message("Pipeline completed (or attempted).")
-
-    still_missing <- required_results[!file.exists(required_results)]
-    if (length(still_missing) > 0) {
-      warning(
-        "Some results still missing after pipeline: ",
-        paste(still_missing, collapse = ", ")
-      )
-    }
-  }, error = function(e) {
-    warning("Pipeline execution failed in setup chunk: ", e$message)
-  })
+  warning(
+    "The following result files are missing; corresponding figures ",
+    "will show placeholder panels:\n",
+    paste(" -", missing_results, collapse = "\n")
+  )
 }
 
 # -------------------------------
-# 7. Helper to safely read RDS
+# 6. Helper to safely read RDS
 # -------------------------------
 read_or_null <- function(path) {
   if (!file.exists(path)) return(NULL)
@@ -193,11 +166,48 @@ read_or_null <- function(path) {
 }
 
 # -------------------------------
-# 8. Load results into memory
+# 7. Harmonize DE result columns
 # -------------------------------
-de_p12_p1          <- read_or_null("results/de_results_P12_vs_P1.rds")
-de_p28_p1          <- read_or_null("results/de_results_P28_vs_P1.rds")
-de_p28_p12         <- read_or_null("results/de_results_P28_vs_P12.rds")
+normalize_de_table <- function(df) {
+  if (is.null(df)) return(NULL)
+
+  # Coerce to data.frame if it's a DESeqResults or other S4 object
+  if (!is.data.frame(df)) {
+    df <- as.data.frame(df)
+  }
+
+  x <- df
+
+  # Handle log2 FC column
+  if (!"log2FoldChange" %in% names(x)) {
+    if ("logFC" %in% names(x)) {
+      x$log2FoldChange <- x$logFC
+    } else if ("LFC" %in% names(x)) {
+      x$log2FoldChange <- x$LFC
+    }
+  }
+
+  # Handle adjusted p-value
+  if (!"padj" %in% names(x)) {
+    if ("adj.P.Val" %in% names(x)) {
+      x$padj <- x$adj.P.Val
+    } else if ("FDR" %in% names(x)) {
+      x$padj <- x$FDR
+    } else if ("p.adjust" %in% names(x)) {
+      x$padj <- x$p.adjust
+    }
+  }
+
+  x
+}
+
+# -------------------------------
+# 8. Load results into memory (single point)
+# -------------------------------
+de_p12_p1          <- normalize_de_table(read_or_null("results/de_results_P12_vs_P1.rds"))
+de_p28_p1          <- normalize_de_table(read_or_null("results/de_results_P28_vs_P1.rds"))
+de_p28_p12         <- normalize_de_table(read_or_null("results/de_results_P28_vs_P12.rds"))
+
 hallmark_p28_p1    <- read_or_null("results/hallmark_enrichment_P28_vs_P1.rds")
 hallmark_p12_p1    <- read_or_null("results/hallmark_enrichment_P12_vs_P1.rds")
 umap_results       <- read_or_null("results/umap_embedding.rds")
@@ -209,7 +219,35 @@ message("Results loading complete.")
 
 **Methods:** We developed a comprehensive computational pipeline to analyze transcriptomic changes across postnatal developmental stages (P1 → P12 → P28) using GEO dataset GSE65927. Our approach integrates differential expression analysis, pathway enrichment, gene regulatory network inference, manifold learning, and quiescence signature discovery.
 
-**Results.** We identified 2,847 differentially expressed genes across developmental transitions, discovered novel quiescence signatures including Pax7, Myf5, and Six1 transcription factors, and constructed comprehensive gene regulatory networks. Pathway velocity analysis revealed dynamic changes in cell cycle, metabolism, and signaling pathways.
+**Results.** We identified `r ifelse(is.null(de_p28_p1), "N/A", sum(!is.na(de_p28_p1$padj) & de_p28_p1$padj <= cfg_analysis$padj_threshold & abs(de_p28_p1$log2FoldChange) >= cfg_analysis$log2fc_threshold, na.rm = TRUE))` differentially expressed genes (P28 vs P1, FDR < `r cfg_analysis$padj_threshold`, |log2FC| > `r cfg_analysis$log2fc_threshold`), `r ifelse(is.null(de_p12_p1), "N/A", sum(!is.na(de_p12_p1$padj) & de_p12_p1$padj <= cfg_analysis$padj_threshold & abs(de_p12_p1$log2FoldChange) >= cfg_analysis$log2fc_threshold, na.rm = TRUE))` genes (P12 vs P1), and `r ifelse(is.null(de_p28_p12), "N/A", sum(!is.na(de_p28_p12$padj) & de_p28_p12$padj <= cfg_analysis$padj_threshold & abs(de_p28_p12$log2FoldChange) >= cfg_analysis$log2fc_threshold, na.rm = TRUE))` genes (P28 vs P12) across developmental transitions, discovered novel quiescence signatures including Pax7, Myf5, and Six1 transcription factors, and constructed comprehensive gene regulatory networks. Pathway velocity analysis revealed dynamic changes in cell cycle, metabolism, and signaling pathways.
+
+```{r debug-results, echo=FALSE, include=FALSE, results='hide'}
+# Debug information - hidden from final output
+# cat("DEBUG: de_p12_p1\n")
+# if (is.null(de_p12_p1)) {
+#   cat("  -> de_p12_p1 is NULL\n\n")
+# } else {
+#   cat("  class:", class(de_p12_p1), "\n")
+#   cat("  nrow:", nrow(as.data.frame(de_p12_p1)), "\n")
+#   cat("  cols:", paste(names(de_p12_p1), collapse = ", "), "\n\n")
+# }
+# 
+# cat("DEBUG: hallmark_p28_p1\n")
+# if (is.null(hallmark_p28_p1)) {
+#   cat("  -> hallmark_p28_p1 is NULL\n\n")
+# } else {
+#   cat("  class:", class(hallmark_p28_p1), "\n")
+#   cat("  cols:", paste(names(hallmark_p28_p1), collapse = ", "), "\n\n")
+# }
+# 
+# cat("DEBUG: umap_results\n")
+# if (is.null(umap_results)) {
+#   cat("  -> umap_results is NULL\n")
+# } else {
+#   cat("  class:", class(umap_results), "\n")
+#   cat("  cols:", paste(names(as.data.frame(umap_results)), collapse = ", "), "\n")
+# }
+```
 
 **Conclusions.** This systems-level analysis provides unprecedented insights into satellite cell developmental programming and identifies potential therapeutic targets for enhancing muscle regeneration.
 
@@ -319,11 +357,8 @@ Quality Control Summary:
 
 ### Volcano Plot
 
-```{r volcano-plot, fig.width=6, fig.height=5,
-    fig.cap="Volcano plot for P12 vs P1 differential expression."}
-
+```{r volcano-plot, fig.width=6, fig.height=5, fig.cap="Volcano plot for P12 vs P1 differential expression."}
 if (is.null(de_p12_p1)) {
-  # Placeholder if results are missing
   plot(1, type = "n", axes = FALSE, xlab = "", ylab = "",
        main = "Volcano plot will appear here once DE analysis is completed.\nRun the pipeline to generate results.")
   text(1, 1, "No DE results available yet", cex = 1.2, col = "gray50")
@@ -334,21 +369,15 @@ if (is.null(de_p12_p1)) {
   plot_df <- de_p12_p1 |>
     dplyr::filter(!is.na(log2FoldChange), !is.na(padj), padj > 0)
 
-  if (nrow(plot_df) == 0) {
-    plot(1, type = "n", axes = FALSE, xlab = "", ylab = "",
-         main = "DE results loaded but no valid log2FC/padj values to plot.")
-    text(1, 1, "Check your DESeq2 pipeline.", cex = 1.2, col = "gray50")
-  } else {
-    ggplot(plot_df, aes(x = log2FoldChange, y = -log10(padj))) +
-      geom_point(alpha = 0.6) +
-      geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed") +
-      geom_hline(yintercept = -log10(padj_cut), linetype = "dashed") +
-      labs(
-        x = "log2 fold change",
-        y = "-log10 adjusted p-value",
-        title = "Volcano Plot: P12 vs P1"
-      )
-  }
+  ggplot(plot_df, aes(x = log2FoldChange, y = -log10(padj))) +
+    geom_point(alpha = 0.6) +
+    geom_vline(xintercept = c(-lfc_cut, lfc_cut), linetype = "dashed") +
+    geom_hline(yintercept = -log10(padj_cut), linetype = "dashed") +
+    labs(
+      x = "log2 fold change",
+      y = "-log10 adjusted p-value",
+      title = "Volcano Plot: P12 vs P1"
+    )
 }
 ```
 
@@ -422,9 +451,7 @@ text(1, 1, "Network inference pending", cex = 1.2, col = "gray50")
 
 ### UMAP Embedding
 
-```{r umap-plot, fig.width=6, fig.height=5,
-    fig.cap="UMAP embedding of samples colored by developmental stage."}
-
+```{r umap-plot, fig.width=6, fig.height=5, fig.cap="UMAP embedding of samples colored by developmental stage."}
 if (is.null(umap_results)) {
   plot(1, type = "n", axes = FALSE, xlab = "", ylab = "",
        main = "UMAP embedding will appear here once trajectory analysis is completed.\nRun the pipeline to generate results.")
@@ -435,10 +462,8 @@ if (is.null(umap_results)) {
 
   if (!all(needed_cols %in% names(df))) {
     plot(1, type = "n", axes = FALSE, xlab = "", ylab = "",
-         main = paste(
-           "UMAP results loaded but missing columns:\n",
-           paste(setdiff(needed_cols, names(df)), collapse = ", ")
-         ))
+         main = paste("UMAP results loaded but missing columns:",
+                      paste(setdiff(needed_cols, names(df)), collapse = ", ")))
   } else {
     ggplot(df, aes(x = UMAP1, y = UMAP2, color = Stage)) +
       geom_point(size = 3, alpha = 0.85) +

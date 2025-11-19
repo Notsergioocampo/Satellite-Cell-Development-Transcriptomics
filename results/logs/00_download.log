@@ -24,3 +24,45 @@
 2025-11-18 03:28:35.875068 INFO::Sample information saved to: data/metadata/sample_info.csv
 2025-11-18 03:28:35.966376 INFO::Data validation completed. Report saved to: results/data_validation.json
 2025-11-18 03:28:35.967163 INFO::Data download pipeline completed successfully
+2025-11-18 14:57:23.453485 INFO::Starting satellite cell transcriptomics data download pipeline
+2025-11-18 14:57:23.46547 INFO::Configured GEO dataset: GSE65927
+2025-11-18 14:57:23.471422 INFO::Expected platform: GPL13112
+2025-11-18 14:57:23.475364 INFO::Connecting to GEO database via GEOquery::getGEO ...
+2025-11-18 14:57:33.806022 INFO::Successfully downloaded dataset: GSE65927
+2025-11-18 14:57:33.808076 INFO::Platform (from ExpressionSet annotation): GPL1261
+2025-11-18 14:57:33.811936 INFO::Number of samples: 11
+2025-11-18 14:57:33.816344 INFO::Number of features: 45101
+2025-11-18 14:57:36.217177 INFO::Raw ExpressionSet saved to: data/raw/GSE65927_raw.RData
+2025-11-18 14:57:36.222703 INFO::Phenotype data saved to: data/metadata/GSE65927_phenotype.csv
+2025-11-18 14:57:36.54632 INFO::Feature data saved to: data/metadata/GSE65927_features.csv
+2025-11-18 14:57:36.563219 INFO::Sample information saved to: data/metadata/sample_info.csv
+2025-11-18 14:57:36.59394 INFO::Data validation completed. Report saved to: results/data_validation.json
+2025-11-18 14:57:36.594532 INFO::Data download pipeline completed successfully
+2025-11-18 14:59:14.792466 INFO::Starting satellite cell transcriptomics data download pipeline
+2025-11-18 14:59:14.801605 INFO::Configured GEO dataset: GSE65927
+2025-11-18 14:59:14.80838 INFO::Expected platform: GPL13112
+2025-11-18 14:59:14.812775 INFO::Connecting to GEO database via GEOquery::getGEO ...
+2025-11-18 14:59:28.467144 INFO::Successfully downloaded dataset: GSE65927
+2025-11-18 14:59:28.468466 INFO::Platform (from ExpressionSet annotation): GPL1261
+2025-11-18 14:59:28.470037 INFO::Number of samples: 11
+2025-11-18 14:59:28.471163 INFO::Number of features: 45101
+2025-11-18 14:59:30.319941 INFO::Raw ExpressionSet saved to: data/raw/GSE65927_raw.RData
+2025-11-18 14:59:30.322726 INFO::Phenotype data saved to: data/metadata/GSE65927_phenotype.csv
+2025-11-18 14:59:30.631538 INFO::Feature data saved to: data/metadata/GSE65927_features.csv
+2025-11-18 14:59:30.661886 INFO::Sample information saved to: data/metadata/sample_info.csv
+2025-11-18 14:59:30.687627 INFO::Data validation completed. Report saved to: results/data_validation.json
+2025-11-18 14:59:30.688171 INFO::Data download pipeline completed successfully
+2025-11-18 15:06:42.748091 INFO::Starting satellite cell transcriptomics data download pipeline
+2025-11-18 15:06:42.759056 INFO::Configured GEO dataset: GSE65927
+2025-11-18 15:06:42.765955 INFO::Expected platform: GPL13112
+2025-11-18 15:06:42.770657 INFO::Connecting to GEO database via GEOquery::getGEO ...
+2025-11-18 15:06:52.357805 INFO::Successfully downloaded dataset: GSE65927
+2025-11-18 15:06:52.361078 INFO::Platform (from ExpressionSet annotation): GPL1261
+2025-11-18 15:06:52.36385 INFO::Number of samples: 11
+2025-11-18 15:06:52.365797 INFO::Number of features: 45101
+2025-11-18 15:06:54.650477 INFO::Raw ExpressionSet saved to: data/raw/GSE65927_raw.RData
+2025-11-18 15:06:54.652695 INFO::Phenotype data saved to: data/metadata/GSE65927_phenotype.csv
+2025-11-18 15:06:54.983744 INFO::Feature data saved to: data/metadata/GSE65927_features.csv
+2025-11-18 15:06:55.004219 INFO::Sample information saved to: data/metadata/sample_info.csv
+2025-11-18 15:06:55.034237 INFO::Data validation completed. Report saved to: results/data_validation.json
+2025-11-18 15:06:55.034888 INFO::Data download pipeline completed successfully
