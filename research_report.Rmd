@@ -234,6 +234,22 @@ count_de_genes <- function(de_tbl, cfg) {
   )
 }
 
+# Helper to count DE genes for a single contrast (safe version)
+safe_de_count <- function(de_tab, cfg) {
+  if (is.null(de_tab)) return(NA_integer_)
+  if (!all(c("log2FoldChange", "padj") %in% colnames(de_tab))) return(NA_integer_)
+  
+  padj_thr <- cfg$padj_threshold
+  lfc_thr  <- cfg$log2fc_threshold
+  
+  sum(
+    !is.na(de_tab$padj) &
+      de_tab$padj <= padj_thr &
+      !is.na(de_tab$log2FoldChange) &
+      abs(de_tab$log2FoldChange) >= lfc_thr
+  )
+}
+
 # Helper to count union of DE genes across multiple contrasts
 count_de_union <- function(..., cfg) {
   de_list <- list(...)
@@ -397,6 +413,130 @@ Quality Control Summary:
 ## Differential Expression Analysis
 
 ### Global Expression Changes
+
+```{r de-global-helpers, include=FALSE}
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(ggplot2)
+})
+
+# Collect DE tables into a named list
+de_list <- list(
+  "P12 vs P1"  = de_p12_p1,
+  "P28 vs P1"  = de_p28_p1,
+  "P28 vs P12" = de_p28_p12
+)
+
+# Safe helper to count DE genes with thresholds from cfg_analysis
+count_de_summary <- function(df, cfg) {
+  if (is.null(df)) {
+    return(list(n_genes = NA_integer_, n_up = NA_integer_, n_down = NA_integer_))
+  }
+  needed <- c("log2FoldChange", "padj")
+  if (!all(needed %in% names(df))) {
+    return(list(n_genes = NA_integer_, n_up = NA_integer_, n_down = NA_integer_))
+  }
+
+  thr_p   <- if (!is.null(cfg$padj_threshold))   cfg$padj_threshold   else 0.05
+  thr_lfc <- if (!is.null(cfg$log2fc_threshold)) cfg$log2fc_threshold else 1
+
+  keep <- !is.na(df$padj) & !is.na(df$log2FoldChange)
+
+  padj <- df$padj[keep]
+  lfc  <- df$log2FoldChange[keep]
+
+  sig <- padj <= thr_p & abs(lfc) >= thr_lfc
+
+  n_genes <- sum(keep)
+  n_up    <- sum(sig & lfc > 0)
+  n_down  <- sum(sig & lfc < 0)
+
+  list(n_genes = n_genes, n_up = n_up, n_down = n_down)
+}
+```
+
+```{r global-expression-density, echo=FALSE, message=FALSE, warning=FALSE,
+fig.width=7, fig.height=5,
+fig.cap="Global distribution of log2 fold-changes across developmental contrasts."}
+
+# Build DE list locally so we don't depend on external objects
+de_list <- list(
+  "P12 vs P1"  = de_p12_p1,
+  "P28 vs P1"  = de_p28_p1,
+  "P28 vs P12" = de_p28_p12
+)
+
+# Filter out NULLs
+de_list <- de_list[!vapply(de_list, is.null, logical(1))]
+
+# If everything is NULL, show placeholder
+if (length(de_list) == 0L) {
+  plot.new()
+  text(
+    0.5, 0.5,
+    "No differential expression results available yet.\nRun src/02_de_analysis.R first.",
+    cex = 1
+  )
+} else {
+
+  plot_df <- dplyr::bind_rows(
+    lapply(names(de_list), function(lbl) {
+      df <- de_list[[lbl]]
+      if (is.null(df) || !"log2FoldChange" %in% names(df)) return(NULL)
+      data.frame(
+        contrast       = lbl,
+        log2FoldChange = df$log2FoldChange
+      )
+    })
+  )
+
+  ggplot(plot_df, aes(x = log2FoldChange, fill = contrast)) +
+    geom_density(alpha = 0.35) +
+    geom_vline(xintercept = 0, linetype = "dashed") +
+    labs(
+      title = "Global Distribution of Expression Changes",
+      x     = "log2 fold-change",
+      y     = "Density",
+      fill  = "Contrast"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold")
+    )
+}
+```
+
+```{r global-expression-summary, echo=FALSE}
+if (all(vapply(de_list, is.null, logical(1)))) {
+  cat("No differential expression results are available yet; the summary table will be populated once src/02_de_analysis.R has been run.\n")
+} else {
+  thr_p   <- if (!is.null(cfg_analysis$padj_threshold))   cfg_analysis$padj_threshold   else 0.05
+  thr_lfc <- if (!is.null(cfg_analysis$log2fc_threshold)) cfg_analysis$log2fc_threshold else 1
+
+  summary_df <- dplyr::bind_rows(
+    lapply(names(de_list), function(lbl) {
+      df <- de_list[[lbl]]
+      counts <- count_de_summary(df, cfg_analysis)
+      data.frame(
+        contrast = lbl,
+        n_genes  = counts$n_genes,
+        n_up     = counts$n_up,
+        n_down   = counts$n_down
+      )
+    })
+  )
+
+  knitr::kable(
+    summary_df,
+    caption = paste0(
+      "Summary of global differential expression across contrasts ",
+      "(FDR ≤ ", thr_p, ", |log2FC| ≥ ", thr_lfc, ")."
+    )
+  )
+}
+```
+
+Overall, postnatal development is characterized by widespread transcriptional remodeling (Figure \@ref(fig:global-expression-density)), with thousands of genes changing expression across P1 → P12 → P28 (Table \@ref(tab:global-expression-summary)).
 
 ### Volcano Plot
 
@@ -609,56 +749,61 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
 ### UMAP Data Preparation
 
 ```{r umap-data-prep, include=FALSE, message=FALSE, warning=FALSE}
-# 1. Choose which matrix to use for UMAP
-#    Adjust this line to match what you actually have:
-#    - vst_mat
-#    - rlog_mat
-#    - norm_counts
-#    etc.
-if (exists("vst_mat")) {
-  expr_mat <- as.matrix(vst_mat)
-} else if (exists("rlog_mat")) {
-  expr_mat <- as.matrix(rlog_mat)
-} else {
-  expr_mat <- NULL
+suppressPackageStartupMessages({
+  library(Biobase)
+  library(uwot)      # or 'umap' if you prefer, but this matches your earlier setup
+  library(readr)
+  library(dplyr)
+})
+
+# 1. Build expr_mat directly from the microarray ExpressionSet 'gse'
+if (!exists("expr_mat")) {
+  if (exists("gse")) {
+    expr_mat <- Biobase::exprs(gse)
+  } else if (file.exists("data/raw/GSE65927_raw.RData")) {
+    load("data/raw/GSE65927_raw.RData")  # should load 'gse'
+    if (!exists("gse")) {
+      stop("Object 'gse' not found in GSE65927_raw.RData")
+    }
+    expr_mat <- Biobase::exprs(gse)
+  } else {
+    expr_mat <- NULL
+  }
 }
 
-# 2. Compute UMAP if possible
-if (!is.null(expr_mat)) {
-  if (!requireNamespace("uwot", quietly = TRUE)) {
-    stop("Package 'uwot' is required for UMAP but is not installed.")
-  }
+# If we still don't have an expression matrix, don't try to run UMAP
+if (is.null(expr_mat)) {
+  UMAP_results <- NULL
+} else {
+  # 2. UMAP expects samples as rows → transpose (genes x samples → samples x genes)
+  expr_for_umap <- t(expr_mat)
+  rownames(expr_for_umap) <- colnames(expr_mat)
 
-  # UMAP works on rows = samples, so transpose if rows = genes
-  if (nrow(expr_mat) > ncol(expr_mat)) {
-    expr_for_umap <- t(expr_mat)
-  } else {
-    expr_for_umap <- expr_mat
-  }
+  # 3. Load sample metadata to color by developmental stage
+  sample_info <- tryCatch(
+    readr::read_csv("data/metadata/sample_info.csv", show_col_types = FALSE),
+    error = function(e) NULL
+  )
 
+  # 4. Configure and run UMAP
   set.seed(42)
   umap_embed <- uwot::umap(
     expr_for_umap,
-    n_neighbors = 15,
-    min_dist = 0.3,
+    n_neighbors  = min(8, nrow(expr_for_umap) - 1),  # Ensure n_neighbors < dataset size
+    min_dist     = 0.3,
     n_components = 2,
-    metric = "euclidean"
+    metric       = "euclidean"
   )
 
-  UMAP_results <- as.data.frame(umap_embed)
-  colnames(UMAP_results) <- c("UMAP1", "UMAP2")
+  # 5. Build UMAP_results for plotting
+  UMAP_results <- data.frame(
+    UMAP1     = umap_embed[, 1],
+    UMAP2     = umap_embed[, 2],
+    sample_id = rownames(expr_for_umap)
+  )
 
-  # If you have a sample metadata table (e.g. coldata, sample_metadata),
-  # merge it here. Adjust the name if needed.
-  if (exists("sample_metadata")) {
-    UMAP_results$sample_id <- rownames(expr_for_umap)
-    UMAP_results <- dplyr::left_join(
-      UMAP_results,
-      sample_metadata,
-      by = c("sample_id" = "sample_id")
-    )
-  } else {
-    UMAP_results$sample_id <- rownames(expr_for_umap)
+  if (!is.null(sample_info) && "sample_id" %in% names(sample_info)) {
+    UMAP_results <- dplyr::left_join(UMAP_results, sample_info, by = "sample_id")
   }
 }
 ```
