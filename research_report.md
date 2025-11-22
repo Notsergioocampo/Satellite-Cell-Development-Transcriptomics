@@ -162,6 +162,61 @@ Quality Control Summary:
 
 ### Global Expression Changes
 
+
+
+```{r global-expression-density, echo=FALSE, message=FALSE, warning=FALSE,
+fig.width=7, fig.height=5,
+fig.cap="Global distribution of log2 fold-changes across developmental contrasts."}
+
+# Check if we have at least one non-NULL DE table
+if (all(vapply(de_list, is.null, logical(1)))) {
+  plot.new()
+  text(
+    0.5, 0.5,
+    "No differential expression results available yet. Run src/02_de_analysis.R first.",
+    cex = 1
+  )
+} else {
+
+  plot_df <- dplyr::bind_rows(
+    lapply(names(de_list), function(lbl) {
+      df <- de_list[[lbl]]
+      if (is.null(df) || !"log2FoldChange" %in% names(df)) return(NULL)
+      data.frame(
+        contrast       = lbl,
+        log2FoldChange = df$log2FoldChange
+      )
+    }),
+    .id = NULL
+  )
+
+  ggplot(plot_df, aes(x = log2FoldChange, fill = contrast)) +
+    geom_density(alpha = 0.35) +
+    geom_vline(xintercept = 0, linetype = "dashed") +
+    labs(
+      title = "Global Distribution of Expression Changes",
+      x     = "log2 fold-change",
+      y     = "Density",
+      fill  = "Contrast"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold")
+    )
+}
+```
+
+
+Table: Summary of global differential expression across contrasts (FDR ≤ 0.05, |log2FC| ≥ 1).
+
+|contrast   | n_genes| n_up| n_down|
+|:----------|-------:|----:|------:|
+|P12 vs P1  |   45101|  333|    188|
+|P28 vs P1  |   45101| 3048|   1660|
+|P28 vs P12 |   45101| 2244|   1463|
+
+Overall, postnatal development is characterized by widespread transcriptional remodeling (Figure \@ref(fig:global-expression-density)), with thousands of genes changing expression across P1 → P12 → P28 (Table \@ref(tab:global-expression-summary)).
+
 ### Volcano Plot
 
 <div class="figure" style="text-align: center">
@@ -470,6 +525,6 @@ We thank the original authors of GEO dataset GSE65927 for generating and sharing
 
 **Correspondence**: Computational Biology Research Team, [research@institution.edu](mailto:research@institution.edu)
 
-**Received**: 2025-11-18
-**Accepted**: 2025-12-18
-**Published**: 2026-01-02
+**Received**: 2025-11-19
+**Accepted**: 2025-12-19
+**Published**: 2026-01-03

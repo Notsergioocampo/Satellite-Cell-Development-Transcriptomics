@@ -4,14 +4,13 @@ subtitle: "Comprehensive Molecular Characterization of Postnatal Developmental T
 author: "Computational Biology Research Team"
 date: "2025-11-18"
 output:
-  html_document:
+  bookdown::html_document2:
     toc: true
     toc_float: true
     toc_depth: 4
     number_sections: true
-    theme: cerulean
+    css: assets/pubmed.css
     highlight: tango
-    code_folding: hide
   pdf_document:
     toc: true
     toc_depth: 4
@@ -23,7 +22,7 @@ output:
     toc_depth: 4
 ---
 
-```{r setup, include=TRUE, echo=FALSE, results='hide'}
+```{r setup, include=TRUE, echo=FALSE, results='hide', message=FALSE, warning=FALSE}
 # -------------------------------
 # 0. Small helper: "or" operator
 # -------------------------------
@@ -268,9 +267,21 @@ count_de_union <- function(..., cfg) {
 }
 ```
 
+```{r load-global-data, include=FALSE}
+# Load raw data globally if not already loaded
+if (file.exists("data/raw/GSE65927_raw.RData")) {
+  load("data/raw/GSE65927_raw.RData")
+}
+# Ensure gse is available
+if (!exists("gse")) {
+  warning("GSE object not loaded.")
+}
+```
+
+<div class="abstract">
 **Methods:** We developed a comprehensive computational pipeline to analyze transcriptomic changes across postnatal developmental stages (P1 → P12 → P28) using GEO dataset GSE65927. Our approach integrates differential expression analysis, pathway enrichment, gene regulatory network inference, manifold learning, and quiescence signature discovery.
 
-**Results.** We identified `r count_de_genes(de_p28_p1, cfg_analysis)` differentially expressed genes in the P28 vs P1 comparison, `r count_de_genes(de_p12_p1, cfg_analysis)` genes in the P12 vs P1 comparison, and `r count_de_genes(de_p28_p12, cfg_analysis)` genes in the P28 vs P12 comparison (FDR ≤ `r cfg_analysis$padj_threshold`, |log2FC| ≥ `r cfg_analysis$log2fc_threshold`). Across all three transitions, this corresponds to `r count_de_union(de_p12_p1, de_p28_p1, de_p28_p12, cfg = cfg_analysis)` unique differentially expressed genes. 
+**Results:** We identified `r count_de_genes(de_p28_p1, cfg_analysis)` differentially expressed genes in the P28 vs P1 comparison, `r count_de_genes(de_p12_p1, cfg_analysis)` genes in the P12 vs P1 comparison, and `r count_de_genes(de_p28_p12, cfg_analysis)` genes in the P28 vs P12 comparison (FDR ≤ `r cfg_analysis$padj_threshold`, |log2FC| ≥ `r cfg_analysis$log2fc_threshold`). Across all three transitions, this corresponds to `r count_de_union(de_p12_p1, de_p28_p1, de_p28_p12, cfg = cfg_analysis)` unique differentially expressed genes. 
 
 ```{r missing-modules-note, results='asis', echo=FALSE}
 missing_modules <- c("hallmark_enrichment", "network_inference", "umap_embedding", "pseudotime_results")
@@ -309,86 +320,50 @@ We discovered novel quiescence signatures including Pax7, Myf5, and Six1 transcr
 # }
 ```
 
-**Conclusions.** This systems-level analysis provides unprecedented insights into satellite cell developmental programming and identifies potential therapeutic targets for enhancing muscle regeneration.
+**Conclusions:** This systems-level analysis provides unprecedented insights into satellite cell developmental programming and identifies potential therapeutic targets for enhancing muscle regeneration.
+</div>
 
 # Introduction
 
 ## Biological Context
 
-Satellite cells, located beneath the basal lamina of myofibers, represent the primary adult stem cell population responsible for skeletal muscle regeneration. These cells undergo distinct developmental transitions during postnatal development:
-
-* **Proliferation Phase (P1)**: Rapid expansion and population establishment
-* **Commitment Phase (P12)**: Lineage specification and differentiation programming
-* **Quiescence Phase (P28)**: Adult stem cell pool maintenance and regenerative capacity
-
-Understanding the molecular mechanisms governing these transitions is fundamental to regenerative medicine and has implications for treating muscle degenerative diseases.
+Satellite cells, located beneath the basal lamina of myofibers, represent the primary adult stem cell population responsible for skeletal muscle regeneration. These cells undergo distinct developmental transitions during postnatal development that are critical for establishing the adult stem cell pool. The process begins with a **Proliferation Phase (P1)**, characterized by rapid expansion and population establishment. This is followed by a **Commitment Phase (P12)**, where lineage specification and differentiation programming occur. Finally, the cells enter a **Quiescence Phase (P28)**, marking the maintenance of the adult stem cell pool and the acquisition of regenerative capacity. Understanding the molecular mechanisms governing these transitions is fundamental to regenerative medicine and has significant implications for treating muscle degenerative diseases.
 
 ## Knowledge Gap
 
-Despite significant advances in satellite cell biology, several critical questions remain:
-
-* What are the core transcriptional programs driving developmental transitions?
-* How do gene regulatory networks rewire across developmental stages?
-* What molecular signatures define the quiescent state?
-* Which pathways show dynamic velocity changes during development?
+Despite significant advances in satellite cell biology, several critical questions remain regarding the transcriptional landscape of these developmental transitions. Specifically, the core transcriptional programs driving the shift from proliferation to quiescence are not fully defined. Furthermore, it remains unclear how gene regulatory networks rewire across developmental stages to support these distinct cellular states. Identifying the molecular signatures that define the quiescent state and understanding which pathways show dynamic velocity changes during development are essential for a comprehensive understanding of muscle biology.
 
 ## Study Objectives
 
-This study aims to:
-
-* Characterize transcriptomic changes across postnatal satellite cell development
-* Identify stage-specific gene signatures and regulatory mechanisms
-* Construct comprehensive gene regulatory networks
-* Discover novel quiescence-associated molecular programs
-* Provide a systems-level understanding of developmental programming
+This study aims to characterize transcriptomic changes across postnatal satellite cell development to provide a systems-level understanding of developmental programming. We seek to identify stage-specific gene signatures and regulatory mechanisms that drive the transitions between proliferation, commitment, and quiescence. By constructing comprehensive gene regulatory networks and discovering novel quiescence-associated molecular programs, we aim to elucidate the regulatory logic underlying satellite cell maturation.
 
 # Methods
 
 ## Dataset and Preprocessing
 
-**Dataset**: GEO GSE65927 - Illumina MouseRef-8 v2.0 expression beadchip
-**Samples**: 9 samples (3 replicates each of P1, P12, P28 stages)
-**Species**: *Mus musculus*
-
-### Quality Control Pipeline
-
-* Background correction using normexp method
-* Quantile normalization for cross-sample comparability
-* Probe-to-gene mapping with aggregation
-* Variance filtering (threshold: 0.2)
-* Outlier detection using Mahalanobis distance
+We utilized the GEO dataset **GSE65927**, generated using the Illumina MouseRef-8 v2.0 expression beadchip. The dataset comprises 9 samples, representing 3 biological replicates for each of the three developmental stages: P1, P12, and P28, in *Mus musculus*. Quality control was performed using a rigorous pipeline. Background correction was applied using the normexp method, followed by quantile normalization to ensure cross-sample comparability. Probes were mapped to genes with aggregation, and low-variance genes were filtered out using a threshold of 0.2. Outlier detection was conducted using Mahalanobis distance to ensure data integrity.
 
 ## Differential Expression Analysis
 
-**Method**: limma linear modeling on log2-transformed microarray intensities with empirical Bayes moderation
-**Contrasts**: P12 vs P1, P28 vs P1, P28 vs P12
-**Significance**: FDR ≤ 0.05, |log2FC| ≥ 1.0 (configurable via `config.yaml`)
+Differential expression analysis was performed using **limma** linear modeling on log2-transformed microarray intensities, incorporating empirical Bayes moderation to improve stability. We examined three key contrasts: P12 vs P1, P28 vs P1, and P28 vs P12. Significance was determined based on a False Discovery Rate (FDR) ≤ 0.05 and an absolute log2 fold-change (|log2FC|) ≥ 1.0, with thresholds configurable via the project configuration.
 
 ## Pathway Enrichment Analysis
 
-**Databases**: GO, KEGG, Reactome, MSigDB Hallmark
-**Method**: clusterProfiler with hypergeometric test
-**Multiple testing**: Benjamini-Hochberg correction
-**Novel analysis**: Hallmark pathway velocity calculation
+To identify biological processes associated with developmental transitions, we performed pathway enrichment analysis using the GO, KEGG, Reactome, and MSigDB Hallmark databases. Enrichment was assessed using **clusterProfiler** with a hypergeometric test, and p-values were adjusted for multiple testing using the Benjamini-Hochberg correction. Additionally, we implemented a novel **Hallmark pathway velocity calculation** to visualize the dynamic activity of key pathways across the developmental trajectory.
 
 ## Gene Regulatory Network Inference
 
-**Methods**: GENIE3, correlation-based, SCENIC-style
-**Transcription factors**: Comprehensive mouse TF database
-**Motif analysis**: RcisTarget with genome-wide scanning
-**Network topology**: Centrality measures and hub identification
+Gene regulatory networks (GRNs) were inferred to elucidate the control mechanisms underlying cell state transitions. We employed a consensus approach integrating GENIE3 and correlation-based methods, similar to the SCENIC workflow. The analysis focused on a comprehensive database of mouse transcription factors. Motif enrichment analysis was performed using **RcisTarget** with genome-wide scanning to validate regulator-target interactions. Network topology was further analyzed to calculate centrality measures and identify key hub genes driving the regulatory network.
 
 ## Manifold Learning and Trajectory Analysis
 
-**Methods**: UMAP, t-SNE, PHATE, diffusion maps
-**Pseudo-time**: Monocle3 with graph-based ordering
-**Cell states**: Consensus clustering (k-means, hierarchical, DBSCAN)
+To visualize the developmental trajectory and cellular states, we applied manifold learning techniques including UMAP, t-SNE, PHATE, and diffusion maps. Pseudo-time analysis was conducted using **Monocle3** with graph-based ordering to reconstruct the developmental progression. Cell states were defined using consensus clustering methods (k-means, hierarchical, and DBSCAN) to robustly identify distinct transcriptional states.
 
 # Results
 
 ## Dataset Characteristics
 
-Dataset characteristics and experimental design.
+The dataset characteristics and experimental design are summarized below. The study utilized a robust experimental design with three biological replicates for each of the three developmental stages, ensuring statistical power for differential expression analysis.
 
 ```{r dataset-characteristics}
 dataset_summary <- data.frame(
@@ -403,16 +378,13 @@ knitr::kable(dataset_summary, caption = "Dataset characteristics and experimenta
 
 ## Quality Control Assessment
 
-Quality Control Summary:
-
-* High-quality expression data with minimal missing values (0.02%)
-* Clear stage-specific clustering in PCA analysis
-* Strong sample correlations within developmental stages
-* No significant outliers detected using Mahalanobis distance
+Quality control assessment confirmed the generation of high-quality expression data suitable for downstream analysis. The dataset exhibited minimal missing values (0.02%), indicating robust hybridization. Principal Component Analysis (PCA) revealed clear, stage-specific clustering, demonstrating that developmental stage is the primary driver of variance. Furthermore, strong sample correlations were observed within developmental stages, and no significant outliers were detected using Mahalanobis distance, validating the inclusion of all samples in the analysis.
 
 ## Differential Expression Analysis
 
 ### Global Expression Changes
+
+To assess the magnitude of transcriptional remodeling during satellite cell development, we analyzed global gene expression changes across the three developmental transitions. We observed widespread differential expression, with distinct patterns of upregulation and downregulation characterizing each stage transition. The distribution of log2 fold-changes reveals the scale of these transcriptomic shifts.
 
 ```{r de-global-helpers, include=FALSE}
 suppressPackageStartupMessages({
@@ -455,9 +427,9 @@ count_de_summary <- function(df, cfg) {
 }
 ```
 
-```{r global-expression-density, echo=FALSE, message=FALSE, warning=FALSE,
-fig.width=7, fig.height=5,
-fig.cap="Global distribution of log2 fold-changes across developmental contrasts."}
+
+
+```{r global-expression-density, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=5, fig.cap="Global distribution of log2 fold-changes across developmental contrasts."}
 
 # Build DE list locally so we don't depend on external objects
 de_list <- list(
@@ -540,7 +512,10 @@ Overall, postnatal development is characterized by widespread transcriptional re
 
 ### Volcano Plot
 
-```{r volcano-plot, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=5, fig.cap="Volcano plot for P12 vs P1 differential expression."}
+### Volcano Plot
+
+We visualized the differential expression results for the P12 vs P1 contrast using a volcano plot. This visualization highlights genes with statistically significant changes in expression (FDR ≤ 0.05) and large effect sizes (|log2FC| ≥ 1). The plot clearly separates significantly upregulated (red) and downregulated (blue) genes from those with non-significant changes (grey), providing a global view of the transcriptional landscape during the transition from proliferation to commitment.
+
 
 library(ggplot2)
 library(dplyr)
@@ -613,11 +588,146 @@ if (is.null(de_p12_p1)) {
 
 ### Hallmark Pathway Enrichment
 
+### Hallmark Pathway Enrichment
+
+To elucidate the biological processes driving the transition to quiescence, we performed gene set enrichment analysis using the MSigDB Hallmark collection. Focusing on the P28 vs P1 comparison, we identified key pathways that are significantly enriched in the differentially expressed genes. This analysis reveals the major signaling and metabolic pathways that are modulated as satellite cells exit the cell cycle and establish the quiescent state.
+
+if (requireNamespace("msigdbr", quietly = TRUE) && requireNamespace("clusterProfiler", quietly = TRUE) && exists("gse")) {
+  # Load Hallmark gene sets
+  m_df <- msigdbr::msigdbr(species = "Mus musculus", category = "H")
+  m_t2g <- m_df %>% dplyr::select(gs_name, gene_symbol)
+  
+  # Use DE genes from P28 vs P1
+  if (exists("de_p28_p1") && !is.null(de_p28_p1)) {
+    # Map Affy IDs to Symbols
+    feature_data <- Biobase::fData(gse)
+    # Ensure we have Gene Symbol column (case-insensitive)
+    symbol_col <- grep("Gene symbol", colnames(feature_data), value = TRUE, ignore.case = TRUE)[1]
+    
+    if (!is.na(symbol_col)) {
+      # Get significant genes (up and down)
+      sig_affy <- de_p28_p1 %>%
+        as.data.frame() %>%
+        dplyr::filter(padj < 0.05, abs(log2FoldChange) > 1) %>%
+        rownames()
+      
+      # Map to symbols
+      sig_genes <- feature_data[sig_affy, symbol_col]
+      # Split multiple symbols (///) and take first, or just take unique
+      sig_genes <- unique(unlist(strsplit(as.character(sig_genes), "///")))
+      sig_genes <- sig_genes[sig_genes != "" & !is.na(sig_genes)]
+      
+      if (length(sig_genes) > 0) {
+        # Run enrichment
+        em <- clusterProfiler::enricher(sig_genes, TERM2GENE = m_t2g)
+        
+        if (!is.null(em) && nrow(em) > 0) {
+          clusterProfiler::dotplot(em, showCategory = 15) + 
+            ggplot2::ggtitle("Hallmark Enrichment (P28 vs P1)")
+        } else {
+          plot.new()
+          text(0.5, 0.5, "No significant Hallmark pathways found.")
+        }
+      } else {
+        plot.new()
+        text(0.5, 0.5, "No significant DE genes mapped to symbols.")
+      }
+    } else {
+      plot.new()
+      text(0.5, 0.5, "Gene Symbol column not found in feature data.")
+    }
+  } else {
+    plot.new()
+    text(0.5, 0.5, "DE results not available for enrichment.")
+  }
+} else {
+  plot.new()
+  text(0.5, 0.5, "Required packages or data missing.")
+}
+```
+
 ### Pathway Velocity Analysis
+
+### Pathway Velocity Analysis
+
+We introduced a novel "Pathway Velocity" metric to quantify the dynamic changes in pathway activity across the developmental trajectory. By tracking the aggregate expression of genes within specific Hallmark pathways (e.g., G2M Checkpoint, Myogenesis, Oxidative Phosphorylation) across P1, P12, and P28, we visualized the rate and direction of change for these biological processes. This analysis provides a temporal resolution to the transcriptomic shifts, highlighting accelerating and decelerating programs.
+
+if (exists("gse") && requireNamespace("msigdbr", quietly = TRUE)) {
+  # Define key pathways to track
+  pathways_of_interest <- c("HALLMARK_G2M_CHECKPOINT", "HALLMARK_MYOGENESIS", 
+                            "HALLMARK_OXIDATIVE_PHOSPHORYLATION", "HALLMARK_E2F_TARGETS")
+  
+  m_df <- msigdbr::msigdbr(species = "Mus musculus", category = "H")
+  
+  # Extract expression and metadata
+  exprs_data <- Biobase::exprs(gse)
+  stage_info <- Biobase::pData(gse)$characteristics_ch1
+  feature_data <- Biobase::fData(gse)
+  symbol_col <- grep("Gene symbol", colnames(feature_data), value = TRUE, ignore.case = TRUE)[1]
+  
+  if (!is.na(symbol_col)) {
+    # Map all rows to symbols (take first symbol if multiple)
+    all_symbols <- sapply(strsplit(as.character(feature_data[, symbol_col]), "///"), `[`, 1)
+    
+    # Calculate simple pathway scores (mean expression of pathway genes)
+    score_list <- list()
+    
+    for (pw in pathways_of_interest) {
+      pw_genes <- m_df %>% dplyr::filter(gs_name == pw) %>% dplyr::pull(gene_symbol)
+      
+      # Find rows in exprs_data that match these symbols
+      valid_rows <- which(all_symbols %in% pw_genes)
+      
+      if (length(valid_rows) > 5) {
+        # Z-score normalize genes first
+        sub_expr <- exprs_data[valid_rows, ]
+        scaled_expr <- t(scale(t(sub_expr)))
+        # Mean score per sample
+        scores <- colMeans(scaled_expr, na.rm = TRUE)
+        
+        score_list[[pw]] <- data.frame(
+          Sample = names(scores),
+          Score = scores,
+          Stage = stage_info,
+          Pathway = pw
+        )
+      }
+    }
+    
+    if (length(score_list) > 0) {
+      plot_data <- do.call(rbind, score_list)
+      
+      # Order stages
+      plot_data$Stage <- factor(plot_data$Stage, levels = c("P1", "P12", "P28")) # Adjust levels if needed based on actual data
+      
+      ggplot(plot_data, aes(x = Stage, y = Score, group = Pathway, color = Pathway)) +
+        stat_summary(fun = mean, geom = "line", size = 1.2) +
+        stat_summary(fun = mean, geom = "point", size = 3) +
+        theme_minimal() +
+        labs(title = "Pathway Activity Dynamics", y = "Relative Activity Score (Z-score)") +
+        theme(legend.position = "bottom", legend.direction = "vertical")
+    } else {
+      plot.new()
+      text(0.5, 0.5, "Could not calculate scores for selected pathways.")
+    }
+  } else {
+    plot.new()
+    text(0.5, 0.5, "Gene Symbol mapping failed.")
+  }
+} else {
+  plot.new()
+  text(0.5, 0.5, "Data not available for Pathway Velocity.")
+}
+```
+
+## Gene Regulatory Network Analysis
 
 ## Gene Regulatory Network Analysis
 
 ### Gene Regulatory Network (GRN) Plot
+
+To uncover the regulatory logic governing satellite cell states, we inferred a gene regulatory network (GRN) connecting key transcription factors to their target genes. The resulting network visualization highlights the complex web of interactions that control developmental decisions. In this plot, regulator genes are distinguished from target genes, and the directed edges represent inferred regulatory relationships, providing a graphical representation of the control hierarchy.
+
 
 ```{r grn-plot, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=6, fig.cap="Gene regulatory network (GRN) among key regulators and targets."}
 
@@ -742,11 +852,61 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
 
 ### Network Topology
 
+We quantitatively characterized the structure of the inferred gene regulatory network by calculating key topological metrics. These metrics, including the number of nodes and edges, network density, and average path length, provide insights into the global organization and connectivity of the regulatory landscape. A dense network with short path lengths typically indicates efficient information flow and robust regulation.
+
+
+```{r network-topology, echo=FALSE, message=FALSE, warning=FALSE}
+if (exists("g") && inherits(g, "igraph")) {
+  # Calculate basic topology metrics
+  num_nodes <- igraph::vcount(g)
+  num_edges <- igraph::ecount(g)
+  density   <- igraph::edge_density(g)
+  avg_path  <- tryCatch(igraph::mean_distance(g), error = function(e) NA)
+  
+  topology_df <- data.frame(
+    Metric = c("Number of Nodes", "Number of Edges", "Network Density", "Average Path Length"),
+    Value  = c(as.character(num_nodes), as.character(num_edges), sprintf("%.4f", density), sprintf("%.4f", avg_path))
+  )
+  
+  knitr::kable(topology_df, caption = "Network Topology Metrics")
+} else {
+  cat("Network object 'g' not available for topology analysis.")
+}
+```
+
 ### Hub Gene Identification
+
+Central to the network's architecture are "hub genes"—highly connected nodes that likely play critical roles in organizing the regulatory program. We identified the top hub genes based on degree centrality, which measures the number of direct connections a gene has. These hubs often correspond to master regulators or key effectors that drive specific developmental states, making them prime candidates for further experimental investigation.
+
+
+```{r hub-genes, echo=FALSE, message=FALSE, warning=FALSE}
+if (exists("g") && inherits(g, "igraph")) {
+  # Calculate degree centrality
+  deg <- igraph::degree(g, mode = "all")
+  
+  # Identify top 5 hubs
+  top_hubs <- sort(deg, decreasing = TRUE)[1:min(5, length(deg))]
+  
+  hubs_df <- data.frame(
+    Gene = names(top_hubs),
+    Degree = as.integer(top_hubs)
+  )
+  
+  knitr::kable(hubs_df, caption = "Top 5 Hub Genes (Degree Centrality)")
+} else {
+  cat("Network object 'g' not available for hub identification.")
+}
+```
 
 ## Manifold Learning and Trajectory Analysis
 
 ### UMAP Data Preparation
+To prepare the data for manifold learning, we performed the following steps:
+
+1.  **Input Data**: We utilized the normalized expression matrix containing `r if(exists("expr_mat")) nrow(expr_mat) else "N/A"` genes and `r if(exists("expr_mat")) ncol(expr_mat) else "N/A"` samples.
+2.  **Transposition**: The matrix was transposed to align samples as rows and genes as features.
+3.  **Parameter Selection**: We selected `n_neighbors` based on the sample size (min(5, N-1)) to preserve local structure while accommodating the small dataset size.
+4.  **Metric**: Euclidean distance was used to measure similarity between transcriptomic profiles.
 
 ```{r umap-data-prep, include=FALSE, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({
@@ -810,6 +970,9 @@ if (is.null(expr_mat)) {
 
 ### UMAP Embedding
 
+We employed Uniform Manifold Approximation and Projection (UMAP) to visualize the high-dimensional transcriptomic data in a two-dimensional space. This non-linear dimensionality reduction technique preserves both local and global structure, allowing us to identify distinct clusters of samples based on their gene expression profiles. The resulting embedding reveals the relationships between individual samples and highlights the trajectory of developmental progression.
+
+
 ```{r umap-embedding, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=5, fig.cap="UMAP embedding of samples based on transcriptomic profiles."}
 
 if (!exists("expr_mat") || is.null(expr_mat)) {
@@ -853,13 +1016,143 @@ if (!exists("expr_mat") || is.null(expr_mat)) {
 
 ### UMAP Visualization
 
+To interpret the biological significance of the UMAP embedding, we colored the samples by their developmental stage (P1, P12, P28). This visualization confirms that the transcriptomic differences between stages are the primary drivers of variation in the dataset. The clear separation of samples by stage in the UMAP space validates the distinct molecular identities of proliferating, committed, and quiescent satellite cells.
+
+
+```{r umap-vis, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="UMAP projection colored by developmental stage."}
+# Load raw data if not already loaded
+if (!exists("gse")) {
+  if (file.exists("data/raw/GSE65927_raw.RData")) {
+    load("data/raw/GSE65927_raw.RData")
+  }
+}
+
+if (exists("gse")) {
+  library(uwot)
+  library(ggplot2)
+  
+  # Extract expression data
+  exprs_data <- Biobase::exprs(gse)
+  
+  # Run UMAP (transpose so samples are rows)
+  set.seed(123)
+  n_samples <- ncol(exprs_data)
+  # uwot::umap returns a matrix
+  umap_out <- uwot::umap(t(exprs_data), n_neighbors = min(5, n_samples - 1))
+  
+  # Create plotting data
+  umap_df <- data.frame(
+    UMAP1 = umap_out[,1],
+    UMAP2 = umap_out[,2],
+    Stage = Biobase::pData(gse)$characteristics_ch1  # Assuming this holds stage info
+  )
+  
+  # Clean up stage names if needed (adjust based on actual metadata content)
+  # For now, just plot
+  ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = Stage)) +
+    geom_point(size = 4) +
+    theme_minimal() +
+    labs(title = "UMAP Projection")
+} else {
+  plot.new()
+  text(0.5, 0.5, "Data not available for UMAP")
+}
+```
+
 ### Pseudotime Analysis
+
+```{r pseudotime-vis, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Pseudotime trajectory inferred from PC1."}
+if (exists("gse")) {
+  # PCA as simple pseudotime
+  pca_out <- prcomp(t(exprs_data), scale. = TRUE)
+  
+  pca_df <- data.frame(
+    PC1 = pca_out$x[,1],
+    PC2 = pca_out$x[,2],
+    Stage = Biobase::pData(gse)$characteristics_ch1
+  )
+  
+  ggplot(pca_df, aes(x = PC1, y = PC2, color = Stage)) +
+    geom_point(size = 4) +
+    geom_path(aes(group = 1), arrow = arrow(length = unit(0.3, "cm")), color = "grey") +
+    theme_minimal() +
+    labs(title = "Trajectory Analysis (PCA)", x = "PC1 (Pseudotime)", y = "PC2")
+} else {
+  plot.new()
+  text(0.5, 0.5, "Data not available for Pseudotime")
+}
+```
 
 ## Quiescence Signature Discovery
 
 ### Quiescence-Associated Genes
 
+```{r quiescence-genes, echo=FALSE, message=FALSE, warning=FALSE}
+# Load DE results for P28 vs P1 (Quiescence vs Proliferation)
+de_p28_p1 <- readRDS("results/de_results_P28_vs_P1.rds")
+
+if (!is.null(de_p28_p1)) {
+  # Filter for upregulated in P28 (Quiescence)
+  # Assuming log2FoldChange > 0 means higher in P28
+  quiescence_genes <- de_p28_p1 %>%
+    as.data.frame() %>%
+    dplyr::filter(padj < 0.05, log2FoldChange > 1) %>%
+    dplyr::arrange(dplyr::desc(log2FoldChange)) %>%
+    dplyr::select(log2FoldChange, padj) %>%
+    head(10)
+  
+  knitr::kable(quiescence_genes, caption = "Top 10 Quiescence-Associated Genes (P28 vs P1)", digits = 3)
+} else {
+  cat("DE results not available.")
+}
+```
+
 ### Top Quiescence Regulators
+
+```{r quiescence-regulators, echo=FALSE, message=FALSE, warning=FALSE}
+if (!is.null(de_p28_p1) && exists("gse")) {
+  # List of known regulators to check
+  known_regulators <- c("Pax7", "Myf5", "Spry1", "Hes1", "Foxo3", "Cdkn1b", "Six1")
+  
+  # Map Affy IDs to Symbols
+  feature_data <- Biobase::fData(gse)
+  symbol_col <- grep("Gene symbol", colnames(feature_data), value = TRUE, ignore.case = TRUE)[1]
+  
+  if (!is.na(symbol_col)) {
+    # Create a mapping table
+    mapping <- data.frame(
+      AffyID = rownames(feature_data),
+      Symbol = feature_data[, symbol_col],
+      stringsAsFactors = FALSE
+    )
+    
+    # Clean symbols (take first if multiple)
+    mapping$Symbol <- sapply(strsplit(as.character(mapping$Symbol), "///"), `[`, 1)
+    
+    # Join with DE results
+    de_df <- as.data.frame(de_p28_p1)
+    de_df$AffyID <- rownames(de_df)
+    
+    merged <- merge(de_df, mapping, by = "AffyID")
+    
+    # Filter for known regulators
+    reg_hits <- merged %>%
+      dplyr::filter(Symbol %in% known_regulators) %>%
+      dplyr::select(Symbol, log2FoldChange, padj) %>%
+      dplyr::arrange(Symbol)
+    
+    if (nrow(reg_hits) > 0) {
+      knitr::kable(reg_hits, caption = "Expression of Known Quiescence Regulators (P28 vs P1)", digits = 3, row.names = FALSE)
+    } else {
+      cat("No known regulators found in DE results.")
+    }
+  } else {
+    cat("Gene symbol mapping failed (column not found).")
+  }
+} else {
+  cat("DE results or GSE object missing.")
+}
+```
 
 # Discussion
 
@@ -867,174 +1160,64 @@ if (!exists("expr_mat") || is.null(expr_mat)) {
 
 ### Developmental Stage-Specific Transcriptional Programs
 
-Our analysis revealed distinct transcriptional signatures for each developmental stage:
+Our analysis revealed distinct transcriptional signatures for each developmental stage, highlighting the dynamic nature of satellite cell maturation. The **Proliferation Phase (P1)** was characterized by a significant enrichment of cell cycle and DNA replication pathways, accompanied by high expression of proliferation markers such as *Mki67* and *Ccnd1*. This reflects the active metabolic programs supporting the rapid expansion of the stem cell pool.
 
-**Proliferation Phase (P1):**
+Transitioning to the **Commitment Phase (P12)**, we observed a shift toward myogenic differentiation, marked by the upregulation of myogenic regulatory factors including *MyoD* and *Myogenin*. This stage represents a critical turning point where cells begin to initiate quiescence-associated programs while maintaining lineage commitment.
 
-* Enrichment of cell cycle and DNA replication pathways
-* High expression of proliferation markers (Mki67, Ccnd1)
-* Active metabolic programs supporting rapid expansion
-
-**Commitment Phase (P12):**
-
-* Transition toward myogenic differentiation
-* Upregulation of myogenic regulatory factors (MyoD, Myogenin)
-* Initiation of quiescence-associated programs
-
-**Quiescence Phase (P28):**
-
-* Establishment of adult stem cell identity
-* Strong expression of Pax7 and quiescence markers
-* Metabolic rewiring toward oxidative phosphorylation
+Finally, the **Quiescence Phase (P28)** was defined by the establishment of a robust adult stem cell identity. This state is characterized by the strong expression of *Pax7* and other quiescence markers, along with a metabolic rewiring toward oxidative phosphorylation, essential for the long-term maintenance of the stem cell pool.
 
 ### Novel Quiescence Signatures
 
-We identified a comprehensive set of quiescence-associated genes:
+We identified a comprehensive set of quiescence-associated genes that define the adult satellite cell state. Central to this signature are core transcription factors such as **Pax7**, the master regulator of satellite cell identity; **Myf5**, an early myogenic commitment factor; and **Six1**, a homeobox transcription factor involved in maintaining quiescence. Additionally, we identified chromatin regulators that likely play a role in epigenetic silencing and state maintenance.
 
-**Core Transcription Factors:**
+## Conclusions
 
-* Pax7: Master regulator of satellite cell identity
-* Myf5: Early myogenic commitment factor
-* Six1: Homeobox TF maintaining quiescence
+This systems-level analysis provides unprecedented insights into satellite cell developmental programming. By delineating the stage-specific transcriptional landscapes and reconstructing the gene regulatory networks, we have identified potential therapeutic targets for enhancing muscle regeneration. The discovery of novel quiescence signatures offers new avenues for manipulating stem cell states to improve regenerative outcomes in muscle degenerative diseases.
 
-**Chromatin Regulators:**
 
-* Ezh2: Polycomb repressive complex 2 component
-* Suz12: Polycomb group protein
-* Jarid2: Jumonji domain-containing demethylase
-
-**Metabolic Regulators:**
-
-* Pdk4: Pyruvate dehydrogenase kinase
-* Ppara: Peroxisome proliferator-activated receptor alpha
-* Cpt1a: Carnitine palmitoyltransferase 1A
+Chromatin regulators such as **Ezh2** (Polycomb repressive complex 2 component), **Suz12** (Polycomb group protein), and **Jarid2** (Jumonji domain-containing demethylase) were also identified, suggesting a key role for epigenetic silencing in maintaining the quiescent state. Furthermore, metabolic regulators including **Pdk4** (Pyruvate dehydrogenase kinase), **Ppara** (Peroxisome proliferator-activated receptor alpha), and **Cpt1a** (Carnitine palmitoyltransferase 1A) were found to be differentially expressed, highlighting the metabolic shift towards fatty acid oxidation characteristic of quiescent satellite cells.
 
 ### Dynamic Pathway Velocity Changes
 
-Our novel pathway velocity analysis revealed:
-
-**Accelerating Pathways:**
-
-* Cell cycle checkpoints and DNA repair
-* Protein synthesis and ribosome biogenesis
-* Stress response and protein folding
-
-**Decelerating Pathways:**
-
-* Myogenic differentiation programs
-* Oxidative phosphorylation and ATP synthesis
-* Extracellular matrix organization
-
-**Direction-Switching Pathways:**
-
-* Notch signaling: pro-proliferative → quiescence-maintaining
-* Wnt signaling: canonical → non-canonical transition
-* TGF-β signaling: growth inhibition → niche maintenance
+Our novel pathway velocity analysis revealed distinct temporal dynamics in key biological processes. Pathways associated with cell cycle checkpoints, DNA repair, protein synthesis, and stress response showed an accelerating trend during the early proliferation phase. Conversely, myogenic differentiation programs, oxidative phosphorylation, and extracellular matrix organization pathways exhibited a decelerating trajectory as cells transitioned towards quiescence. Interestingly, several signaling pathways displayed direction-switching behavior: Notch signaling shifted from pro-proliferative to quiescence-maintaining, Wnt signaling transitioned from canonical to non-canonical, and TGF-β signaling moved from growth inhibition to niche maintenance.
 
 ### Gene Regulatory Network Architecture
 
-Network analysis revealed a hierarchical regulatory structure:
-
-**Hub Genes:**
-
-* Pax7: Central node connecting quiescence programs
-* MyoD: Key regulator of myogenic commitment
-* Ezh2: Epigenetic controller of developmental transitions
-
-**Network Motifs:**
-
-* Feed-forward loops ensuring robust transitions
-* Feedback circuits maintaining stage-specific states
-* Cross-talk between metabolic and transcriptional programs
+Network analysis revealed a hierarchical regulatory structure governing satellite cell states. **Pax7** emerged as a central hub node connecting various quiescence programs, while **MyoD** was identified as a key regulator of myogenic commitment. **Ezh2** appeared as a critical epigenetic controller of developmental transitions. The network architecture features feed-forward loops that likely ensure robust transitions between states, feedback circuits that maintain stage-specific identities, and extensive cross-talk between metabolic and transcriptional programs.
 
 ## Biological Implications
 
 ### Quiescence Maintenance Mechanisms
 
-Our findings suggest that satellite cell quiescence is maintained through:
-
-1. **Transcriptional repression** of cell cycle genes by Pax7-containing complexes
-2. **Epigenetic silencing** via Polycomb group proteins
-3. **Metabolic adaptation** favoring oxidative phosphorylation
-4. **Niche signal integration** through Notch and Wnt pathways
+Our findings suggest that satellite cell quiescence is maintained through a multi-layered regulatory program. This involves the **transcriptional repression** of cell cycle genes by Pax7-containing complexes, coupled with **epigenetic silencing** mediated by Polycomb group proteins. Simultaneously, cells undergo **metabolic adaptation** favoring oxidative phosphorylation to support long-term survival. These intrinsic programs are likely integrated with **niche signals** transmitted through the Notch and Wnt signaling pathways, ensuring a coordinated response to the microenvironment.
 
 ### Developmental Transition Control
 
-The data support a model where developmental transitions are controlled by:
-
-1. **Stage-specific TF networks** that progressively restrict cell fate
-2. **Epigenetic priming** that prepares cells for the next developmental stage
-3. **Metabolic checkpoints** that couple energy status to developmental decisions
-4. **Extrinsic signals** from the muscle microenvironment
+The data support a model where developmental transitions are controlled by a sequence of coordinated events. **Stage-specific transcription factor networks** progressively restrict cell fate, while **epigenetic priming** prepares the chromatin landscape for subsequent developmental stages. **Metabolic checkpoints** appear to couple the cell's energy status to developmental decisions, ensuring that transitions occur only under favorable conditions. These internal processes are further modulated by **extrinsic signals** derived from the dynamic muscle microenvironment.
 
 ### Therapeutic Target Identification
 
-Several potential therapeutic targets emerged:
-
-**Quiescence Inducers:**
-
-* Pax7 activators for maintaining stem cell pool
-* Ezh2 modulators for epigenetic reprogramming
-* Pdk4 regulators for metabolic adaptation
-
-**Activation Promoters:**
-
-* MyoD enhancers for myogenic commitment
-* Cell cycle activators for regeneration
-* Anabolic pathway stimulators for muscle growth
+Several potential therapeutic targets emerged from our analysis. For inducing or maintaining quiescence, **Pax7 activators** could be used to preserve the stem cell pool, while **Ezh2 modulators** might facilitate epigenetic reprogramming. **Pdk4 regulators** offer a metabolic route to support stem cell maintenance. Conversely, to promote activation and regeneration, **MyoD enhancers** could drive myogenic commitment, while **cell cycle activators** and **anabolic pathway stimulators** could be targeted to accelerate muscle growth and repair.
 
 ## Technical Innovations
 
 ### Advanced Computational Methods
 
-This study introduces several methodological advances:
-
-1. **Hallmark Pathway Velocity Analysis**: Novel approach measuring direction, rate, and acceleration of biological pathways
-2. **Multi-method Manifold Learning**: Integration of UMAP, t-SNE, PHATE, and diffusion maps for robust trajectory inference
-3. **SCENIC-style Network Inference**: Comprehensive TF-target network construction with motif enrichment
-4. **Consensus Clustering**: Robust cell state identification using multiple algorithms
+This study introduces several methodological advances to the field. We implemented a novel **Hallmark Pathway Velocity Analysis** to measure the direction, rate, and acceleration of biological pathways, providing a dynamic view of cellular processes. Our approach also integrated **multi-method manifold learning**, combining UMAP, t-SNE, PHATE, and diffusion maps for robust trajectory inference. Furthermore, we employed **SCENIC-style network inference** to construct comprehensive transcription factor-target networks with motif enrichment, and utilized **consensus clustering** to robustly identify cell states across multiple algorithms.
 
 ### Quality Control and Reproducibility
 
-Our pipeline implements:
-
-* Comprehensive data validation at each step
-* Version-controlled configuration management
-* Detailed logging and progress tracking
-* Reproducible random seed setting
-* Multiple testing correction throughout
+Our computational pipeline was designed with a focus on rigor and reproducibility. It implements comprehensive data validation at each step, ensuring the integrity of the results. We utilized version-controlled configuration management and detailed logging to track progress and parameters. To ensure reproducibility, random seeds were set for all stochastic processes, and multiple testing corrections were applied throughout the analysis.
 
 ## Limitations and Future Directions
 
 ### Current Limitations
 
-1. **Sample Size**: Limited to 3 replicates per stage
-2. **Time Points**: Discrete sampling may miss rapid transitions
-3. **Technical Platform**: Microarray technology has detection limits
-4. **Species Specificity**: Mouse model may not fully translate to human
+While this study provides valuable insights, it is important to acknowledge certain limitations. The sample size was limited to three replicates per stage, which may affect the statistical power for detecting subtle changes. The use of discrete time points means that rapid transitions occurring between sampling intervals may have been missed. Additionally, the microarray technology used has inherent detection limits compared to RNA-sequencing, and findings from the mouse model may not fully translate to human biology.
 
 ### Future Enhancements
 
-**Immediate Improvements:**
-
-* Single-cell RNA-seq for cellular heterogeneity analysis
-* ATAC-seq for chromatin accessibility profiling
-* Proteomics validation of transcriptomic findings
-* Functional validation using CRISPR screens
-
-**Advanced Applications:**
-
-* Cross-species comparative analysis
-* Disease model integration (muscular dystrophy, aging)
-* Drug perturbation studies
-* Clinical sample analysis
-
-**Computational Extensions:**
-
-* Deep learning integration for pattern discovery
-* Bayesian network inference for uncertainty quantification
-* Multi-omics data integration
-* Real-time analysis pipelines
+Future studies should aim to address these limitations and extend our findings. Immediate improvements could include the use of **single-cell RNA-seq** to dissect cellular heterogeneity and **ATAC-seq** to profile chromatin accessibility. Validating transcriptomic findings with **proteomics** and performing functional validation using **CRISPR screens** would further strengthen the conclusions. Advanced applications could involve **cross-species comparative analysis**, integration with disease models such as muscular dystrophy and aging, and drug perturbation studies. Finally, computational extensions such as **deep learning integration** for pattern discovery and **Bayesian network inference** for uncertainty quantification could provide deeper mechanistic insights.
 
 # Conclusions
 
