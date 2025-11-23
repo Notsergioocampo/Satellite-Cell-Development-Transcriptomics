@@ -35,7 +35,7 @@ output:
 # -------------------------------
 cran_pkgs <- c(
   "ggplot2", "dplyr", "readr", "knitr", "rmarkdown",
-  "umap", "Rtsne", "igraph", "yaml", "viridis"  # use viridis (for ggplot scales)
+  "umap", "Rtsne", "igraph", "yaml", "viridis" # use viridis (for ggplot scales)
 )
 
 bioc_pkgs <- c("DESeq2", "clusterProfiler", "org.Mm.eg.db")
@@ -95,18 +95,18 @@ config <- yaml::read_yaml("config.yaml")
 
 # Shortcuts
 cfg_analysis <- config$analysis
-cfg_vis      <- config$visualization
+cfg_vis <- config$visualization
 
 # -------------------------------
 # 4. Global knitr + theme settings
 # -------------------------------
 knitr::opts_chunk$set(
-  echo      = FALSE,
-  message   = FALSE,
-  warning   = FALSE,
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
   fig.width = 8,
-  fig.height= 6,
-  dpi       = cfg_vis$figure_dpi %||% 300,
+  fig.height = 6,
+  dpi = cfg_vis$figure_dpi %||% 300,
   fig.align = "center"
 )
 
@@ -116,22 +116,24 @@ if (isTRUE(cfg_vis$dark_theme)) {
   base_theme <- base_theme +
     theme(
       panel.background = element_rect(fill = "black", colour = NA),
-      plot.background  = element_rect(fill = "black", colour = NA),
-      text             = element_text(colour = "white"),
-      axis.text        = element_text(colour = "white"),
-      axis.title       = element_text(colour = "white"),
-      legend.background= element_rect(fill = "black", colour = NA),
-      legend.text      = element_text(colour = "white"),
-      legend.title     = element_text(colour = "white")
+      plot.background = element_rect(fill = "black", colour = NA),
+      text = element_text(colour = "white"),
+      axis.text = element_text(colour = "white"),
+      axis.title = element_text(colour = "white"),
+      legend.background = element_rect(fill = "black", colour = NA),
+      legend.text = element_text(colour = "white"),
+      legend.title = element_text(colour = "white")
     )
 }
 
 theme_set(
   base_theme +
     theme(
-      text       = element_text(size = cfg_vis$font_size %||% 12),
-      plot.title = element_text(size = (cfg_vis$font_size %||% 12) + 2,
-                                face = "bold")
+      text = element_text(size = cfg_vis$font_size %||% 12),
+      plot.title = element_text(
+        size = (cfg_vis$font_size %||% 12) + 2,
+        face = "bold"
+      )
     )
 )
 
@@ -163,7 +165,9 @@ if (length(missing_results) > 0) {
 # 6. Helper to safely read RDS
 # -------------------------------
 read_or_null <- function(path) {
-  if (!file.exists(path)) return(NULL)
+  if (!file.exists(path)) {
+    return(NULL)
+  }
   tryCatch(readRDS(path), error = function(e) NULL)
 }
 
@@ -171,7 +175,9 @@ read_or_null <- function(path) {
 # 7. Harmonize DE result columns
 # -------------------------------
 normalize_de_table <- function(df) {
-  if (is.null(df)) return(NULL)
+  if (is.null(df)) {
+    return(NULL)
+  }
 
   # Coerce to data.frame if it's a DESeqResults or other S4 object
   if (!is.data.frame(df)) {
@@ -206,15 +212,15 @@ normalize_de_table <- function(df) {
 # -------------------------------
 # 8. Load results into memory (single point)
 # -------------------------------
-de_p12_p1          <- normalize_de_table(read_or_null("results/de_results_P12_vs_P1.rds"))
-de_p28_p1          <- normalize_de_table(read_or_null("results/de_results_P28_vs_P1.rds"))
-de_p28_p12         <- normalize_de_table(read_or_null("results/de_results_P28_vs_P12.rds"))
+de_p12_p1 <- normalize_de_table(read_or_null("results/de_results_P12_vs_P1.rds"))
+de_p28_p1 <- normalize_de_table(read_or_null("results/de_results_P28_vs_P1.rds"))
+de_p28_p12 <- normalize_de_table(read_or_null("results/de_results_P28_vs_P12.rds"))
 
-hallmark_p28_p1    <- read_or_null("results/hallmark_enrichment_P28_vs_P1.rds")
-hallmark_p12_p1    <- read_or_null("results/hallmark_enrichment_P12_vs_P1.rds")
-umap_results       <- read_or_null("results/umap_embedding.rds")
+hallmark_p28_p1 <- read_or_null("results/hallmark_enrichment_P28_vs_P1.rds")
+hallmark_p12_p1 <- read_or_null("results/hallmark_enrichment_P12_vs_P1.rds")
+umap_results <- read_or_null("results/umap_embedding.rds")
 pseudotime_results <- read_or_null("results/pseudotime_results.rds")
-network_results    <- read_or_null("results/network_inference_results.rds")
+network_results <- read_or_null("results/network_inference_results.rds")
 
 message("Results loading complete.")
 
@@ -223,9 +229,13 @@ message("Results loading complete.")
 # -------------------------------
 # Helper to count DE genes for a single contrast
 count_de_genes <- function(de_tbl, cfg) {
-  if (is.null(de_tbl)) return(NA_integer_)
-  if (!all(c("log2FoldChange", "padj") %in% names(de_tbl))) return(NA_integer_)
-  
+  if (is.null(de_tbl)) {
+    return(NA_integer_)
+  }
+  if (!all(c("log2FoldChange", "padj") %in% names(de_tbl))) {
+    return(NA_integer_)
+  }
+
   sum(
     !is.na(de_tbl$padj) &
       de_tbl$padj <= cfg$padj_threshold &
@@ -235,12 +245,16 @@ count_de_genes <- function(de_tbl, cfg) {
 
 # Helper to count DE genes for a single contrast (safe version)
 safe_de_count <- function(de_tab, cfg) {
-  if (is.null(de_tab)) return(NA_integer_)
-  if (!all(c("log2FoldChange", "padj") %in% colnames(de_tab))) return(NA_integer_)
-  
+  if (is.null(de_tab)) {
+    return(NA_integer_)
+  }
+  if (!all(c("log2FoldChange", "padj") %in% colnames(de_tab))) {
+    return(NA_integer_)
+  }
+
   padj_thr <- cfg$padj_threshold
-  lfc_thr  <- cfg$log2fc_threshold
-  
+  lfc_thr <- cfg$log2fc_threshold
+
   sum(
     !is.na(de_tab$padj) &
       de_tab$padj <= padj_thr &
@@ -253,16 +267,20 @@ safe_de_count <- function(de_tab, cfg) {
 count_de_union <- function(..., cfg) {
   de_list <- list(...)
   de_list <- de_list[!vapply(de_list, is.null, logical(1))]
-  if (length(de_list) == 0) return(NA_integer_)
-  
+  if (length(de_list) == 0) {
+    return(NA_integer_)
+  }
+
   hit_ids <- lapply(de_list, function(tbl) {
-    if (!all(c("log2FoldChange", "padj") %in% names(tbl))) return(character(0))
+    if (!all(c("log2FoldChange", "padj") %in% names(tbl))) {
+      return(character(0))
+    }
     mask <- !is.na(tbl$padj) &
       tbl$padj <= cfg$padj_threshold &
       abs(tbl$log2FoldChange) >= cfg$log2fc_threshold
     rownames(tbl)[mask]
   })
-  
+
   length(unique(unlist(hit_ids)))
 }
 ```
@@ -302,7 +320,7 @@ We discovered novel quiescence signatures including Pax7, Myf5, and Six1 transcr
 #   cat("  nrow:", nrow(as.data.frame(de_p12_p1)), "\n")
 #   cat("  cols:", paste(names(de_p12_p1), collapse = ", "), "\n\n")
 # }
-# 
+#
 # cat("DEBUG: hallmark_p28_p1\n")
 # if (is.null(hallmark_p28_p1)) {
 #   cat("  -> hallmark_p28_p1 is NULL\n\n")
@@ -310,7 +328,7 @@ We discovered novel quiescence signatures including Pax7, Myf5, and Six1 transcr
 #   cat("  class:", class(hallmark_p28_p1), "\n")
 #   cat("  cols:", paste(names(hallmark_p28_p1), collapse = ", "), "\n\n")
 # }
-# 
+#
 # cat("DEBUG: umap_results\n")
 # if (is.null(umap_results)) {
 #   cat("  -> umap_results is NULL\n")
@@ -367,10 +385,14 @@ The dataset characteristics and experimental design are summarized below. The st
 
 ```{r dataset-characteristics}
 dataset_summary <- data.frame(
-  Characteristic = c("Total genes", "Developmental stages", "Biological replicates", 
-                     "Platform", "Species", "GEO accession"),
-  Value = c("16,489", "3 (P1, P12, P28)", "9 (3 per stage)", 
-            "Illumina MouseRef-8 v2.0", "Mus musculus", "GSE65927")
+  Characteristic = c(
+    "Total genes", "Developmental stages", "Biological replicates",
+    "Platform", "Species", "GEO accession"
+  ),
+  Value = c(
+    "16,489", "3 (P1, P12, P28)", "9 (3 per stage)",
+    "Illumina MouseRef-8 v2.0", "Mus musculus", "GSE65927"
+  )
 )
 
 knitr::kable(dataset_summary, caption = "Dataset characteristics and experimental design.")
@@ -409,19 +431,19 @@ count_de_summary <- function(df, cfg) {
     return(list(n_genes = NA_integer_, n_up = NA_integer_, n_down = NA_integer_))
   }
 
-  thr_p   <- if (!is.null(cfg$padj_threshold))   cfg$padj_threshold   else 0.05
+  thr_p <- if (!is.null(cfg$padj_threshold)) cfg$padj_threshold else 0.05
   thr_lfc <- if (!is.null(cfg$log2fc_threshold)) cfg$log2fc_threshold else 1
 
   keep <- !is.na(df$padj) & !is.na(df$log2FoldChange)
 
   padj <- df$padj[keep]
-  lfc  <- df$log2FoldChange[keep]
+  lfc <- df$log2FoldChange[keep]
 
   sig <- padj <= thr_p & abs(lfc) >= thr_lfc
 
   n_genes <- sum(keep)
-  n_up    <- sum(sig & lfc > 0)
-  n_down  <- sum(sig & lfc < 0)
+  n_up <- sum(sig & lfc > 0)
+  n_down <- sum(sig & lfc < 0)
 
   list(n_genes = n_genes, n_up = n_up, n_down = n_down)
 }
@@ -430,7 +452,6 @@ count_de_summary <- function(df, cfg) {
 
 
 ```{r global-expression-density, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=5, fig.cap="Global distribution of log2 fold-changes across developmental contrasts."}
-
 # Build DE list locally so we don't depend on external objects
 de_list <- list(
   "P12 vs P1"  = de_p12_p1,
@@ -450,11 +471,12 @@ if (length(de_list) == 0L) {
     cex = 1
   )
 } else {
-
   plot_df <- dplyr::bind_rows(
     lapply(names(de_list), function(lbl) {
       df <- de_list[[lbl]]
-      if (is.null(df) || !"log2FoldChange" %in% names(df)) return(NULL)
+      if (is.null(df) || !"log2FoldChange" %in% names(df)) {
+        return(NULL)
+      }
       data.frame(
         contrast       = lbl,
         log2FoldChange = df$log2FoldChange
@@ -482,7 +504,7 @@ if (length(de_list) == 0L) {
 if (all(vapply(de_list, is.null, logical(1)))) {
   cat("No differential expression results are available yet; the summary table will be populated once src/02_de_analysis.R has been run.\n")
 } else {
-  thr_p   <- if (!is.null(cfg_analysis$padj_threshold))   cfg_analysis$padj_threshold   else 0.05
+  thr_p <- if (!is.null(cfg_analysis$padj_threshold)) cfg_analysis$padj_threshold else 0.05
   thr_lfc <- if (!is.null(cfg_analysis$log2fc_threshold)) cfg_analysis$log2fc_threshold else 1
 
   summary_df <- dplyr::bind_rows(
@@ -512,11 +534,9 @@ Overall, postnatal development is characterized by widespread transcriptional re
 
 ### Volcano Plot
 
-### Volcano Plot
-
 We visualized the differential expression results for the P12 vs P1 contrast using a volcano plot. This visualization highlights genes with statistically significant changes in expression (FDR ≤ 0.05) and large effect sizes (|log2FC| ≥ 1). The plot clearly separates significantly upregulated (red) and downregulated (blue) genes from those with non-significant changes (grey), providing a global view of the transcriptional landscape during the transition from proliferation to commitment.
 
-
+```{r volcano-plot, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Volcano Plot: P12 vs P1"}
 library(ggplot2)
 library(dplyr)
 
@@ -535,14 +555,13 @@ if (is.null(de_p12_p1)) {
   )
   text(0.5, 0.5, msg, cex = 0.9)
 } else {
-
   # Thresholds: use cfg_analysis if it exists, otherwise default values
   if (exists("cfg_analysis")) {
     padj_cut <- cfg_analysis$padj_threshold
-    lfc_cut  <- cfg_analysis$log2fc_threshold
+    lfc_cut <- cfg_analysis$log2fc_threshold
   } else {
     padj_cut <- 0.05
-    lfc_cut  <- 1
+    lfc_cut <- 1
   }
 
   plot_df <- de_p12_p1 %>%
@@ -553,9 +572,9 @@ if (is.null(de_p12_p1)) {
     ) %>%
     dplyr::mutate(
       sig = dplyr::case_when(
-        padj <= padj_cut & log2FoldChange >=  lfc_cut ~ "Up",
+        padj <= padj_cut & log2FoldChange >= lfc_cut ~ "Up",
         padj <= padj_cut & log2FoldChange <= -lfc_cut ~ "Down",
-        TRUE                                          ~ "NS"
+        TRUE ~ "NS"
       )
     )
 
@@ -588,41 +607,40 @@ if (is.null(de_p12_p1)) {
 
 ### Hallmark Pathway Enrichment
 
-### Hallmark Pathway Enrichment
-
 To elucidate the biological processes driving the transition to quiescence, we performed gene set enrichment analysis using the MSigDB Hallmark collection. Focusing on the P28 vs P1 comparison, we identified key pathways that are significantly enriched in the differentially expressed genes. This analysis reveals the major signaling and metabolic pathways that are modulated as satellite cells exit the cell cycle and establish the quiescent state.
 
+```{r hallmark-enrichment, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Hallmark Enrichment (P28 vs P1)"}
 if (requireNamespace("msigdbr", quietly = TRUE) && requireNamespace("clusterProfiler", quietly = TRUE) && exists("gse")) {
   # Load Hallmark gene sets
   m_df <- msigdbr::msigdbr(species = "Mus musculus", category = "H")
   m_t2g <- m_df %>% dplyr::select(gs_name, gene_symbol)
-  
+
   # Use DE genes from P28 vs P1
   if (exists("de_p28_p1") && !is.null(de_p28_p1)) {
     # Map Affy IDs to Symbols
     feature_data <- Biobase::fData(gse)
     # Ensure we have Gene Symbol column (case-insensitive)
     symbol_col <- grep("Gene symbol", colnames(feature_data), value = TRUE, ignore.case = TRUE)[1]
-    
+
     if (!is.na(symbol_col)) {
       # Get significant genes (up and down)
       sig_affy <- de_p28_p1 %>%
         as.data.frame() %>%
         dplyr::filter(padj < 0.05, abs(log2FoldChange) > 1) %>%
         rownames()
-      
+
       # Map to symbols
       sig_genes <- feature_data[sig_affy, symbol_col]
       # Split multiple symbols (///) and take first, or just take unique
       sig_genes <- unique(unlist(strsplit(as.character(sig_genes), "///")))
       sig_genes <- sig_genes[sig_genes != "" & !is.na(sig_genes)]
-      
+
       if (length(sig_genes) > 0) {
         # Run enrichment
         em <- clusterProfiler::enricher(sig_genes, TERM2GENE = m_t2g)
-        
+
         if (!is.null(em) && nrow(em) > 0) {
-          clusterProfiler::dotplot(em, showCategory = 15) + 
+          clusterProfiler::dotplot(em, showCategory = 15) +
             ggplot2::ggtitle("Hallmark Enrichment (P28 vs P1)")
         } else {
           plot.new()
@@ -648,43 +666,46 @@ if (requireNamespace("msigdbr", quietly = TRUE) && requireNamespace("clusterProf
 
 ### Pathway Velocity Analysis
 
-### Pathway Velocity Analysis
-
 We introduced a novel "Pathway Velocity" metric to quantify the dynamic changes in pathway activity across the developmental trajectory. By tracking the aggregate expression of genes within specific Hallmark pathways (e.g., G2M Checkpoint, Myogenesis, Oxidative Phosphorylation) across P1, P12, and P28, we visualized the rate and direction of change for these biological processes. This analysis provides a temporal resolution to the transcriptomic shifts, highlighting accelerating and decelerating programs.
 
+```{r pathway-velocity, echo=FALSE, message=FALSE, warning=FALSE, fig.cap="Pathway Activity Dynamics"}
 if (exists("gse") && requireNamespace("msigdbr", quietly = TRUE)) {
   # Define key pathways to track
-  pathways_of_interest <- c("HALLMARK_G2M_CHECKPOINT", "HALLMARK_MYOGENESIS", 
-                            "HALLMARK_OXIDATIVE_PHOSPHORYLATION", "HALLMARK_E2F_TARGETS")
-  
+  pathways_of_interest <- c(
+    "HALLMARK_G2M_CHECKPOINT", "HALLMARK_MYOGENESIS",
+    "HALLMARK_OXIDATIVE_PHOSPHORYLATION", "HALLMARK_E2F_TARGETS"
+  )
+
   m_df <- msigdbr::msigdbr(species = "Mus musculus", category = "H")
-  
+
   # Extract expression and metadata
   exprs_data <- Biobase::exprs(gse)
   stage_info <- Biobase::pData(gse)$characteristics_ch1
   feature_data <- Biobase::fData(gse)
   symbol_col <- grep("Gene symbol", colnames(feature_data), value = TRUE, ignore.case = TRUE)[1]
-  
+
   if (!is.na(symbol_col)) {
     # Map all rows to symbols (take first symbol if multiple)
     all_symbols <- sapply(strsplit(as.character(feature_data[, symbol_col]), "///"), `[`, 1)
-    
+
     # Calculate simple pathway scores (mean expression of pathway genes)
     score_list <- list()
-    
+
     for (pw in pathways_of_interest) {
-      pw_genes <- m_df %>% dplyr::filter(gs_name == pw) %>% dplyr::pull(gene_symbol)
-      
+      pw_genes <- m_df %>%
+        dplyr::filter(gs_name == pw) %>%
+        dplyr::pull(gene_symbol)
+
       # Find rows in exprs_data that match these symbols
       valid_rows <- which(all_symbols %in% pw_genes)
-      
+
       if (length(valid_rows) > 5) {
         # Z-score normalize genes first
         sub_expr <- exprs_data[valid_rows, ]
         scaled_expr <- t(scale(t(sub_expr)))
         # Mean score per sample
         scores <- colMeans(scaled_expr, na.rm = TRUE)
-        
+
         score_list[[pw]] <- data.frame(
           Sample = names(scores),
           Score = scores,
@@ -693,13 +714,13 @@ if (exists("gse") && requireNamespace("msigdbr", quietly = TRUE)) {
         )
       }
     }
-    
+
     if (length(score_list) > 0) {
       plot_data <- do.call(rbind, score_list)
-      
+
       # Order stages
       plot_data$Stage <- factor(plot_data$Stage, levels = c("P1", "P12", "P28")) # Adjust levels if needed based on actual data
-      
+
       ggplot(plot_data, aes(x = Stage, y = Score, group = Pathway, color = Pathway)) +
         stat_summary(fun = mean, geom = "line", size = 1.2) +
         stat_summary(fun = mean, geom = "point", size = 3) +
@@ -722,15 +743,12 @@ if (exists("gse") && requireNamespace("msigdbr", quietly = TRUE)) {
 
 ## Gene Regulatory Network Analysis
 
-## Gene Regulatory Network Analysis
-
 ### Gene Regulatory Network (GRN) Plot
 
 To uncover the regulatory logic governing satellite cell states, we inferred a gene regulatory network (GRN) connecting key transcription factors to their target genes. The resulting network visualization highlights the complex web of interactions that control developmental decisions. In this plot, regulator genes are distinguished from target genes, and the directed edges represent inferred regulatory relationships, providing a graphical representation of the control hierarchy.
 
 
 ```{r grn-plot, echo=FALSE, message=FALSE, warning=FALSE, fig.width=7, fig.height=6, fig.cap="Gene regulatory network (GRN) among key regulators and targets."}
-
 # We'll use igraph for the network plot
 if (!requireNamespace("igraph", quietly = TRUE)) {
   plot.new()
@@ -740,15 +758,12 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
     cex = 1.1
   )
 } else {
-
   library(igraph)
 
   # 1) Prefer a user-provided GRN edge list if available
   #    Expected columns: source, target, optional: weight, type (e.g. 'activation', 'repression')
   if (exists("grn_edges") && all(c("source", "target") %in% names(grn_edges))) {
-
     edges_df <- grn_edges
-
   } else if (exists("de_p12_p1")) {
     # 2) Fallback: build a simple demo GRN from top DE genes
     #    This is just to give you a plot to work on – you can replace it
@@ -773,16 +788,16 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
     # - connect each regulator to a few targets
     if (nrow(de_top) >= 6) {
       regulators <- de_top$gene[1:5]
-      targets    <- de_top$gene[6:nrow(de_top)]
+      targets <- de_top$gene[6:nrow(de_top)]
 
       # Simple pattern: each regulator connects to 3 targets (recycled)
       target_assigned <- rep(targets, length.out = length(regulators) * 3)
-      reg_assigned    <- rep(regulators, each = 3)
+      reg_assigned <- rep(regulators, each = 3)
 
       edges_df <- data.frame(
         source = reg_assigned,
         target = target_assigned,
-        type   = "regulation",
+        type = "regulation",
         stringsAsFactors = FALSE
       )
     } else {
@@ -794,7 +809,6 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
       )
       edges_df <- NULL
     }
-
   } else {
     plot.new()
     text(
@@ -807,7 +821,6 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
 
   # If we successfully have edges, create a graph and plot
   if (!is.null(edges_df)) {
-
     # Create igraph object
     g <- graph_from_data_frame(
       d = edges_df,
@@ -816,10 +829,10 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
 
     # Highlight "regulators" as nodes with outgoing edges
     out_deg <- degree(g, mode = "out")
-    is_reg  <- out_deg > 0
+    is_reg <- out_deg > 0
 
-    V(g)$color <- ifelse(is_reg, "#F8766D", "#00BFC4")  # regulators vs targets
-    V(g)$size  <- ifelse(is_reg, 12, 8)
+    V(g)$color <- ifelse(is_reg, "#F8766D", "#00BFC4") # regulators vs targets
+    V(g)$size <- ifelse(is_reg, 12, 8)
     V(g)$label.cex <- 0.7
 
     # Light edge styling
@@ -846,7 +859,6 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
       bty    = "n"
     )
   }
-
 }
 ```
 
@@ -860,14 +872,14 @@ if (exists("g") && inherits(g, "igraph")) {
   # Calculate basic topology metrics
   num_nodes <- igraph::vcount(g)
   num_edges <- igraph::ecount(g)
-  density   <- igraph::edge_density(g)
-  avg_path  <- tryCatch(igraph::mean_distance(g), error = function(e) NA)
-  
+  density <- igraph::edge_density(g)
+  avg_path <- tryCatch(igraph::mean_distance(g), error = function(e) NA)
+
   topology_df <- data.frame(
     Metric = c("Number of Nodes", "Number of Edges", "Network Density", "Average Path Length"),
     Value  = c(as.character(num_nodes), as.character(num_edges), sprintf("%.4f", density), sprintf("%.4f", avg_path))
   )
-  
+
   knitr::kable(topology_df, caption = "Network Topology Metrics")
 } else {
   cat("Network object 'g' not available for topology analysis.")
@@ -883,15 +895,15 @@ Central to the network's architecture are "hub genes"—highly connected nodes t
 if (exists("g") && inherits(g, "igraph")) {
   # Calculate degree centrality
   deg <- igraph::degree(g, mode = "all")
-  
+
   # Identify top 5 hubs
   top_hubs <- sort(deg, decreasing = TRUE)[1:min(5, length(deg))]
-  
+
   hubs_df <- data.frame(
     Gene = names(top_hubs),
     Degree = as.integer(top_hubs)
   )
-  
+
   knitr::kable(hubs_df, caption = "Top 5 Hub Genes (Degree Centrality)")
 } else {
   cat("Network object 'g' not available for hub identification.")
@@ -911,7 +923,7 @@ To prepare the data for manifold learning, we performed the following steps:
 ```{r umap-data-prep, include=FALSE, message=FALSE, warning=FALSE}
 suppressPackageStartupMessages({
   library(Biobase)
-  library(uwot)      # or 'umap' if you prefer, but this matches your earlier setup
+  library(uwot) # or 'umap' if you prefer, but this matches your earlier setup
   library(readr)
   library(dplyr)
 })
@@ -921,7 +933,7 @@ if (!exists("expr_mat")) {
   if (exists("gse")) {
     expr_mat <- Biobase::exprs(gse)
   } else if (file.exists("data/raw/GSE65927_raw.RData")) {
-    load("data/raw/GSE65927_raw.RData")  # should load 'gse'
+    load("data/raw/GSE65927_raw.RData") # should load 'gse'
     if (!exists("gse")) {
       stop("Object 'gse' not found in GSE65927_raw.RData")
     }
@@ -949,7 +961,7 @@ if (is.null(expr_mat)) {
   set.seed(42)
   umap_embed <- uwot::umap(
     expr_for_umap,
-    n_neighbors  = min(8, nrow(expr_for_umap) - 1),  # Ensure n_neighbors < dataset size
+    n_neighbors  = min(8, nrow(expr_for_umap) - 1), # Ensure n_neighbors < dataset size
     min_dist     = 0.3,
     n_components = 2,
     metric       = "euclidean"
@@ -974,7 +986,6 @@ We employed Uniform Manifold Approximation and Projection (UMAP) to visualize th
 
 
 ```{r umap-embedding, echo=FALSE, message=FALSE, warning=FALSE, fig.width=6, fig.height=5, fig.cap="UMAP embedding of samples based on transcriptomic profiles."}
-
 if (!exists("expr_mat") || is.null(expr_mat)) {
   plot.new()
   text(
@@ -1030,23 +1041,23 @@ if (!exists("gse")) {
 if (exists("gse")) {
   library(uwot)
   library(ggplot2)
-  
+
   # Extract expression data
   exprs_data <- Biobase::exprs(gse)
-  
+
   # Run UMAP (transpose so samples are rows)
   set.seed(123)
   n_samples <- ncol(exprs_data)
   # uwot::umap returns a matrix
   umap_out <- uwot::umap(t(exprs_data), n_neighbors = min(5, n_samples - 1))
-  
+
   # Create plotting data
   umap_df <- data.frame(
-    UMAP1 = umap_out[,1],
-    UMAP2 = umap_out[,2],
-    Stage = Biobase::pData(gse)$characteristics_ch1  # Assuming this holds stage info
+    UMAP1 = umap_out[, 1],
+    UMAP2 = umap_out[, 2],
+    Stage = Biobase::pData(gse)$characteristics_ch1 # Assuming this holds stage info
   )
-  
+
   # Clean up stage names if needed (adjust based on actual metadata content)
   # For now, just plot
   ggplot(umap_df, aes(x = UMAP1, y = UMAP2, color = Stage)) +
@@ -1065,13 +1076,13 @@ if (exists("gse")) {
 if (exists("gse")) {
   # PCA as simple pseudotime
   pca_out <- prcomp(t(exprs_data), scale. = TRUE)
-  
+
   pca_df <- data.frame(
-    PC1 = pca_out$x[,1],
-    PC2 = pca_out$x[,2],
+    PC1 = pca_out$x[, 1],
+    PC2 = pca_out$x[, 2],
     Stage = Biobase::pData(gse)$characteristics_ch1
   )
-  
+
   ggplot(pca_df, aes(x = PC1, y = PC2, color = Stage)) +
     geom_point(size = 4) +
     geom_path(aes(group = 1), arrow = arrow(length = unit(0.3, "cm")), color = "grey") +
@@ -1100,7 +1111,7 @@ if (!is.null(de_p28_p1)) {
     dplyr::arrange(dplyr::desc(log2FoldChange)) %>%
     dplyr::select(log2FoldChange, padj) %>%
     head(10)
-  
+
   knitr::kable(quiescence_genes, caption = "Top 10 Quiescence-Associated Genes (P28 vs P1)", digits = 3)
 } else {
   cat("DE results not available.")
@@ -1113,11 +1124,11 @@ if (!is.null(de_p28_p1)) {
 if (!is.null(de_p28_p1) && exists("gse")) {
   # List of known regulators to check
   known_regulators <- c("Pax7", "Myf5", "Spry1", "Hes1", "Foxo3", "Cdkn1b", "Six1")
-  
+
   # Map Affy IDs to Symbols
   feature_data <- Biobase::fData(gse)
   symbol_col <- grep("Gene symbol", colnames(feature_data), value = TRUE, ignore.case = TRUE)[1]
-  
+
   if (!is.na(symbol_col)) {
     # Create a mapping table
     mapping <- data.frame(
@@ -1125,22 +1136,22 @@ if (!is.null(de_p28_p1) && exists("gse")) {
       Symbol = feature_data[, symbol_col],
       stringsAsFactors = FALSE
     )
-    
+
     # Clean symbols (take first if multiple)
     mapping$Symbol <- sapply(strsplit(as.character(mapping$Symbol), "///"), `[`, 1)
-    
+
     # Join with DE results
     de_df <- as.data.frame(de_p28_p1)
     de_df$AffyID <- rownames(de_df)
-    
+
     merged <- merge(de_df, mapping, by = "AffyID")
-    
+
     # Filter for known regulators
     reg_hits <- merged %>%
       dplyr::filter(Symbol %in% known_regulators) %>%
       dplyr::select(Symbol, log2FoldChange, padj) %>%
       dplyr::arrange(Symbol)
-    
+
     if (nrow(reg_hits) > 0) {
       knitr::kable(reg_hits, caption = "Expression of Known Quiescence Regulators (P28 vs P1)", digits = 3, row.names = FALSE)
     } else {
